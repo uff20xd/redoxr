@@ -1,0 +1,8 @@
+bin = [
+  { name = "redoxr", path = "redoxr.rs"},
+]
+
+[package]
+name = "redoxr"
+publish = false
+edition = "2025"
