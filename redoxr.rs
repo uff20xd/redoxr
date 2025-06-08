@@ -1,13 +1,31 @@
+
+
+
+//fn main () -> () {
+//    //Build Code Here
+//    
+//    
+//    //Self Build
+//    RedOxR::new("build")
+//        .self_build()
+//        .set_system_target("x86_64-unknown-linux-gnu")
+//        .compile();
+//}
+
+//====================================================================
+//Code that handles it. Like slightly easier to use than the library version.
+//====================================================================
+
 use std::{
     process::{
         Command,
     },
 };
 
-struct OxUtils;
-
-impl OxUtils {
-}
+//struct OxUtils;
+//
+//impl OxUtils {
+//}
 
 pub struct RedOxR {
     file_name: String,
@@ -40,21 +58,21 @@ impl RedOxR {
 
     pub fn compile (&mut self) -> &mut Self {
         let mut compiling_command = Command::new("rustc");
-        let mut compiling_command = compiling_command.current_dir(&self.dir)
+        compiling_command.current_dir(&self.dir)
             .arg(&self.file_name)
             .arg("--crate-type=".to_owned() + &self.crate_type)
             .arg("--target=".to_owned() + &self.target);
 
         if self.is_main {
-            let mut compiling_command = compiling_command.arg("--crate-name").arg(&self.output_file);
+            compiling_command.arg("--crate-name").arg(&self.output_file);
         }
         for crates in &self.libraries {
-            let mut compiling_command = compiling_command.arg("--extern").arg(crates[0].clone() + "=" + &crates[1]);
+            compiling_command.arg("--extern").arg(crates[0].clone() + "=" + &crates[1]);
         }
         for flag in &self.rustc_flags {
-            let mut compiling_command = compiling_command.arg(flag);
+            compiling_command.arg(flag);
         }
-        let temp = compiling_command.spawn().unwrap().wait();
+        let _temp = compiling_command.spawn().unwrap().wait();
         self
     }
 
