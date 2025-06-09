@@ -1,4 +1,5 @@
 mod testlib;
+use testlib::factorial;
 fn main() {
     println!("{}",fibbonci(50));
 }

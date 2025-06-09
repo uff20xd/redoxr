@@ -15,12 +15,14 @@ fn main () -> () {
         .compile();
 
     
-    let external_lib = RedOxR::external("external_lib", "https://github.com/clap-rs/clap.git");
+    let external_lib = RedOxR::external("external_lib", "https://github.com/clap-rs/clap.git")
+        .make_mod("cargo");
 
 
     let main = RedOxR::new("rustc_tests/main")
         .set_system_target("x86_64-unknown-linux-gnu")
         .compile()
+        //.add_lib(external_lib)
         .run("");
 
 }

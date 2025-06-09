@@ -9,6 +9,13 @@ pub mod redoxr {
         },
     };
 
+    enum CrateBuilder {
+        False,
+        Cargo,
+        RedOxR,
+        None,
+    }
+
     pub struct RedOxR {
         file_name: String,
         dir: String,
@@ -23,7 +30,7 @@ pub mod redoxr {
     
     impl RedOxR {
         pub fn self_build(self) -> Self{
-            self.add_library("redoxr", "libredoxr.rlib").set
+            self.add_lib("redoxr", "libredoxr.rlib").set
         }
     
         pub fn new (name: &str) -> Self {
@@ -69,8 +76,12 @@ pub mod redoxr {
             self
         }
     
-        pub fn add_library (mut self, name: &str, path: &str) -> Self {
+        pub fn add_rlib(mut self, name: &str, path: &str) -> Self {
             self.libraries.push([name.to_owned(), path.to_owned()]);
+            self
+        }
+
+        pub fn add_lib(mut self, lib: Self) -> Self {
             self
         }
     
