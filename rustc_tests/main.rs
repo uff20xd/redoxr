@@ -1,7 +1,7 @@
-mod testlib;
-use testlib::factorial;
+mod test_lib;
+use test_lib::factorial;
 fn main() {
-    println!("{}",fibbonci(50));
+    println!("{} ; {}",fibbonci(50), factorial(20));
 }
 
 fn fibbonci (n: u64) -> u64 {
