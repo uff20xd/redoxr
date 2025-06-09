@@ -1,7 +1,6 @@
 //====================================================================
 //Code that handles it. Like slightly easier to use than the library version.
 //====================================================================
-
 #![allow(dead_code)]
 pub mod redoxr {
     use std::{
@@ -13,6 +12,7 @@ pub mod redoxr {
     pub struct RedOxR {
         file_name: String,
         dir: String,
+
         target: String,
         rustc_flags: Vec<String>,
         crate_type: String,
@@ -23,7 +23,7 @@ pub mod redoxr {
     
     impl RedOxR {
         pub fn self_build(self) -> Self{
-            self.add_library("redoxr", "libredoxr.rlib")
+            self.add_library("redoxr", "libredoxr.rlib").set
         }
     
         pub fn new (name: &str) -> Self {

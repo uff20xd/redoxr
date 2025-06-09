@@ -1,3 +1,4 @@
+mod testlib;
 fn main() {
     println!("{}",fibbonci(50));
 }
