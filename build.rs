@@ -1,5 +1,5 @@
 extern crate redoxr;
-use redoxr::RedOxR;
+use redoxr::redoxr::RedOxR;
 
 fn main () -> () {
     let _ = {
