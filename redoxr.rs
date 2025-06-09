@@ -22,7 +22,7 @@ pub mod redoxr {
     }
     
     impl RedOxR {
-        pub fn self_build(&mut self) -> &mut Self{
+        pub fn self_build(self) -> Self{
             self.add_library("redoxr", "libredoxr.rlib")
         }
     
@@ -39,7 +39,7 @@ pub mod redoxr {
             }
         }
     
-        pub fn compile (&mut self) -> &mut Self {
+        pub fn compile (self) -> Self {
             let mut compiling_command = Command::new("rustc");
             compiling_command.current_dir(&self.dir)
                 .arg(&self.file_name)
@@ -60,7 +60,7 @@ pub mod redoxr {
             self
         }
 
-        pub fn run(&mut self, args: &str) -> &mut Self {
+        pub fn run(self, args: &str) -> Self {
             let mut command = Command::new("./".to_owned() + &self.output_file);
             let args_new = args.split_whitespace();
             let _child = command
@@ -69,33 +69,33 @@ pub mod redoxr {
             self
         }
     
-        pub fn add_library (&mut self, name: &str, path: &str) -> &mut Self {
+        pub fn add_library (mut self, name: &str, path: &str) -> Self {
             self.libraries.push([name.to_owned(), path.to_owned()]);
             self
         }
     
-        pub fn set_crate_type (&mut self, crate_type: &str) -> &mut Self {
+        pub fn set_crate_type (mut self, crate_type: &str) -> Self {
             self.crate_type = crate_type.to_owned();
             self
         }
     
-        pub fn generate_crate (&mut self) -> &mut Self {
+        pub fn generate_crate (mut self) -> Self {
             self.is_main = true;
             self
         }
     
-        pub fn set_system_target (&mut self, target: &str) -> &mut Self {
+        pub fn set_system_target (mut self, target: &str) -> Self {
             self.target = target.to_owned();
             self
         }
     
-        pub fn set_output (&mut self, file: &str) -> &mut Self {
+        pub fn set_output (mut self, file: &str) -> Self {
             self.output_file = file.to_owned();
             self
         }
 
         ///This is a Debug Function used for selfbuilding
-        pub fn copy_raw(&mut self, path: &str) -> &mut Self {
+        pub fn copy_raw(self, path: &str) -> Self {
             let mut command = Command::new("cp");
             let _child = command
                 .arg("-u")
@@ -109,17 +109,16 @@ pub mod redoxr {
         }
 
         ///Implement later
-        pub fn compile_c (&mut self) -> &mut Self {
+        pub fn compile_c (self) -> Self {
             todo!();
-            self
         }
 
-        pub fn reset_flags (&mut self) -> &mut Self {
+        pub fn reset_flags (mut self) -> Self {
             self.rustc_flags = Vec::new();
             self
         }
     
-        pub fn add_flag(&mut self, flag: &str) -> &mut Self {
+        pub fn add_flag(mut self, flag: &str) -> Self {
             let raw_flags: String = flag.to_owned();
             let mut new_flags: Vec<String> = Vec::new();
             let mut start_slice: usize = 0;
@@ -191,14 +190,14 @@ pub mod redoxr_cargo {
                 out_dir: env::var_os("OUT_DIR").unwrap(),
             }
         }
-        pub fn rerun(&mut self) -> &mut Self {
+        pub fn rerun(self) -> Self {
             println!("cargo::rerun-if-changed=build.rs");
             self
         }
         pub fn get_out_dir(&self) -> &OsString {
             &self.out_dir
         }
-        pub fn add_cargo_setting (&mut self, setting: &str, value: &str) -> &mut Self {
+        pub fn add_cargo_setting (self, setting: &str, value: &str) -> Self {
             let setting_to_print = "cargo::".to_owned() + setting + "=" + value;
             println!("{}", setting_to_print);
             self
@@ -214,7 +213,7 @@ pub mod redoxr_cargo {
                 "".to_owned()
             )
         }
-        pub fn write (&mut self, value: &str) -> &mut Self {
+        pub fn write (mut self, value: &str) -> Self {
             self.1 = value.to_owned();
             fs::write(&self.0,value).unwrap();
             self
