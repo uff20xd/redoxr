@@ -108,12 +108,6 @@ pub mod redoxr {
             self
         }
 
-        ///Implement later
-        pub fn compile_c (&mut self) -> &mut Self {
-            todo!();
-            self
-        }
-
         pub fn reset_flags (&mut self) -> &mut Self {
             self.rustc_flags = Vec::new();
             self
