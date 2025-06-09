@@ -49,7 +49,8 @@ pub mod redoxr {
             compiling_command.current_dir(&self.dir)
                 .arg(&self.file_name)
                 .arg("--crate-type=".to_owned() + &self.crate_type)
-                .arg("--target=".to_owned() + &self.target);
+                .arg("--target=".to_owned() + &self.target)
+                .arg("-o".to_owned()).arg(&self.output_file);
     
             if self.is_main {
                 compiling_command.arg("--crate-name").arg(&self.output_file);
@@ -148,8 +149,38 @@ pub mod redoxr {
 }
 
 pub mod redoxr_cargo {
-    pub struct RedOxRCargo {
-        rustc_flags: Vec<String>,
+    use std:: {
+        env,
+        fs,
+        path::Path,
+        path::PathBuf,
+        ffi::OsString
+    };
 
+    pub struct Truck {
+        out_dir: OsString,
     }
+
+    impl Truck {
+        pub fn new () -> Self {
+            Self {
+                out_dir: env::var_os("OUT_DIR").unwrap(),
+            }
+        }
+        pub fn get_out_dir(&self) -> &OsString {
+            &self.out_dir
+        }
+    }
+
+    pub struct TruckFile(PathBuf, String);
+
+    impl TruckFile {
+        pub fn new(out_dir: &Truck, name: &str) -> Self  {
+            Self (
+                Path::new(out_dir.get_out_dir()).join(name),
+                "".to_owned()
+            )
+        }
+    }
+
 }

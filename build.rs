@@ -8,6 +8,10 @@ fn main () -> () {
             .set_system_target("x86_64-unknown-linux-gnu")
             .compile();
 
+        RedOxR::new("tests/main")
+            .set_system_target("x86_64-unknown-linux-gnu")
+            .compile();
+
         RedOxR::new("redoxr")
             .generate_crate()
             .set_crate_type("lib")
