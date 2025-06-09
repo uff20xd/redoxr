@@ -3,11 +3,6 @@
 //====================================================================
 
 
-//struct OxUtils;
-//
-//impl OxUtils {
-//}
-
 pub mod redoxr {
     use std::{
         process::{
@@ -167,8 +162,17 @@ pub mod redoxr_cargo {
                 out_dir: env::var_os("OUT_DIR").unwrap(),
             }
         }
+        pub fn rerun(&mut self) -> &mut Self {
+            println!("cargo::rerun-if-changed=build.rs");
+            self
+        }
         pub fn get_out_dir(&self) -> &OsString {
             &self.out_dir
+        }
+        pub fn add_cargo_setting (&mut self, setting: &str, value: &str) -> &mut Self {
+            let setting_to_print = "cargo::".to_owned() + setting + "=" + value;
+            println!("{}", setting_to_print);
+            self
         }
     }
 
@@ -180,6 +184,11 @@ pub mod redoxr_cargo {
                 Path::new(out_dir.get_out_dir()).join(name),
                 "".to_owned()
             )
+        }
+        pub fn write (&mut self, value: &str) -> &mut Self {
+            self.1 = value.to_owned();
+            fs::write(&self.0,value).unwrap();
+            self
         }
     }
 
