@@ -59,6 +59,15 @@ pub mod redoxr {
             let _temp = compiling_command.spawn().unwrap().wait();
             self
         }
+
+        pub fn run(&mut self, args: &str) -> &mut Self {
+            let mut command = Command::new("./".to_owned() + &self.output_file);
+            let mut args_new = args.split_whitespace();
+            let child = command
+                .args(args_new)
+                .spawn().unwrap();
+            self
+        }
     
         pub fn add_library (&mut self, name: &str, path: &str) -> &mut Self {
             self.libraries.push([name.to_owned(), path.to_owned()]);
@@ -82,6 +91,20 @@ pub mod redoxr {
     
         pub fn set_output (&mut self, file: &str) -> &mut Self {
             self.output_file = file.to_owned();
+            self
+        }
+
+        ///This is a Debug Function used for selfbuilding
+        pub fn copy_raw(&mut self, path: &str) -> &mut Self {
+            let mut command = Command::new("cp");
+            let child = command
+                .arg("-u")
+                .arg("-p")
+                .arg(&self.file_name)
+                .arg(path.to_owned() + "/" + &self.file_name)
+                .spawn()
+                .unwrap();
+
             self
         }
 
