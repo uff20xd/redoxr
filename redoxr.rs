@@ -188,7 +188,7 @@ pub mod redoxr {
                 compiling_command.arg(flag);
             }
 
-            let mut temp = compiling_command.spawn();
+            let temp = compiling_command.spawn();
                 //.unwrap().wait();
             match temp {
                 Ok(mut a) => {
