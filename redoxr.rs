@@ -315,6 +315,7 @@ pub mod redoxr {
             self.out_name = match crate_type {
                 "lib" => "lib".to_owned() + &self.name + ".rlib",
                 "bin" => self.name.clone(),
+                "dylib" => "lib".to_owned() + &self.name + ".so",
                 _ => todo!(),
             };
             self.crate_type = crate_type.to_owned();

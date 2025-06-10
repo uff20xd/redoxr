@@ -7,14 +7,14 @@ fn main () {
     let build = RedOxR::build_script();
     if !build.compile() {build.error()};
 
-    //let _redoxr = RedOxR::root("redoxr", ".")
-    //    .set_src_dir(".")
-    //    .set_main_file("redoxr.rs")
-    //    .set_crate_type("lib")
-    //    .set_system_target("x86_64-unknown-linux-gnu");
-    //    //.copy_raw("crate-test")
+    let _redoxr = RedOxR::root("redoxr", ".")
+        .set_src_dir(".")
+        .set_main_file("redoxr.rs")
+        .set_crate_type("lib")
+        .set_system_target("x86_64-unknown-linux-gnu");
+        //.copy_raw("crate-test")
 
-    //if !build.compile() {build.error()};
+    if !build.compile() {build.error()};
 
     let clap = RedOxR::external("clap", "https://github.com/clap-rs/clap.git").set_output("clap_complete");
     let add = RedOxR::root("crate_test", "crate_test").set_crate_builder("cargo");
