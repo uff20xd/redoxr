@@ -180,7 +180,7 @@ pub mod redoxr {
                         dbg!(&cp_child);
                         let _ = cp_child.spawn().unwrap().wait();
 
-                        compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.3 + ".rlib");
+                        compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.1 + ".rlib");
                         dbg!(&compiling_command);
                     },
                     _ => todo!()

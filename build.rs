@@ -23,6 +23,7 @@ fn main () {
         .set_src_dir("rustc_tests")
         .add_lib(add)
         .add_lib(clap)
+        .add_flag(&["--extern", "clap_complete=rustc_tests/libs/libclap_complete.rlib"])
         //.add_rlib("crate_test")
         .set_system_target("x86_64-unknown-linux-gnu");
     
