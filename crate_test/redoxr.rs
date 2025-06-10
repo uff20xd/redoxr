@@ -5,18 +5,16 @@
 #![allow(dead_code)]
 pub mod redoxr {
     use std::{
-        fs,
-        path::Path,
         process::{
-            exit, Command, //Child,
-        }, 
-        str::{self},
+            Command,
+            exit,
+        },
+        path::Path,
+        fs,
+        str
     };
- 
-    #[derive(Debug, Clone)]
     struct Library(pub CrateBuilder, pub String, pub String);
 
-    #[derive(Debug, Clone)]
     enum CrateBuilder {
         SingleFile,
         Cargo,
@@ -25,32 +23,22 @@ pub mod redoxr {
         None,
     }
 
-    enum CrateType {
-        Lib,
-        Bin,
-    }
-
-    #[derive(Debug)]
     pub struct RedOxR {
         name: String,
         main_file: String,
         out_name: String,
-
         root_dir: String,
         src_dir: String,
         out_dir: String,
 
-        rustc_flags: Vec<String>,
-
         target: String,
+        rustc_flags: Vec<String>,
         crate_type: String,
         libraries: Vec<Library>,
 
         external_address: String,
         crate_builder: CrateBuilder,
         is_external: bool,
-
-        //processes: Vec<Child>,
     }
     
     impl RedOxR {
@@ -60,12 +48,11 @@ pub mod redoxr {
                 main_file: "build.rs".to_owned(),
                 out_name: "build".to_owned(),
 
-                rustc_flags: Vec::new(),
-
                 root_dir: ".".to_owned(),
                 src_dir: ".".to_owned(),
 
                 target: "x86_64-unknown-linux-gnu".to_owned(),
+                rustc_flags: Vec::new(),
                 crate_type: "bin".to_owned(),
                 out_dir: ".".to_owned(),
 
@@ -74,30 +61,25 @@ pub mod redoxr {
                 external_address: "".to_owned(),
                 crate_builder: CrateBuilder::SingleFile,
                 is_external: false,
-
-                //processes: Vec::new(),
             };
             build_script.libraries.push(Library(CrateBuilder::PreBuilt, "redoxr".to_owned(), ".".to_owned()));
             build_script
         }
 
         pub fn root (name: &str, root: &str) -> Self {
-            if name.contains("-") || root.contains("-") {
-                println!("RedOxR-Error: Neither crate path nor crate name may contain a \"-\"!");
-            }
             Self {
                 name: name.to_owned(),
                 main_file: "main.rs".to_owned(),
                 out_name: name.to_owned(),
 
-                rustc_flags: Vec::new(),
-
                 root_dir: root.to_owned(),
                 src_dir: "src".to_owned(),
-                out_dir: "bin".to_owned(),
 
                 target: "x86_64-unknown-linux-gnu".to_owned(),
+                rustc_flags: Vec::new(),
                 crate_type: "bin".to_owned(),
+                out_dir: "bin".to_owned(),
+
                 libraries: Vec::new(),
 
                 external_address: "".to_owned(),
@@ -112,14 +94,13 @@ pub mod redoxr {
                 main_file: "lib.rs".to_owned(),
                 out_name: name.to_owned(),
 
-                rustc_flags: Vec::new(),
-
                 root_dir: ".".to_owned(),
                 src_dir: "src".to_owned(),
-                out_dir: "bin".to_owned(),
 
                 target: "x86_64-unknown-linux-gnu".to_owned(),
+                rustc_flags: Vec::new(),
                 crate_type: "lib".to_owned(),
+                out_dir: "bin".to_owned(),
 
                 libraries: Vec::new(),
 
@@ -129,18 +110,12 @@ pub mod redoxr {
             }
         }
 
-        pub fn error(&self) -> () {
-            println!("This is an error: {:?}", &self);
-            exit(1)
-        }
-
-        pub fn compile (&self) -> bool {
+        pub fn compile (self) -> Self {
             let _ = fs::create_dir(self.root_dir.clone() + "/bin");
             let out_file = self.out_dir.clone() + "/" + &self.out_name;
 
             let mut compiling_command = Command::new("rustc");
-            println!("main_file: {}/{}/{}",&self.root_dir, &self.src_dir, &self.main_file);
-            println!("libraries: {:?}", &self.libraries);
+            println!("{}/{}/{}",&self.root_dir, &self.src_dir, &self.main_file);
 
             compiling_command.current_dir(&self.root_dir)
                 .arg(self.src_dir.clone() + "/" + &self.main_file)
@@ -163,16 +138,13 @@ pub mod redoxr {
                         let mut child = cargo_command.current_dir(&crates.2).arg("build").arg("--release").spawn().unwrap();
                         let _ = child.wait();
 
-                        let mut cp_command = Command::new("cp");
-                        let wrapped_child = cp_command
+                        let mut cargo_command = Command::new("cp");
+                        let mut child = cargo_command
                             .current_dir(&self.root_dir)
                             .arg(crates.2.clone() + "/target/release/lib" + &crates.1 + ".rlib")
                             .arg(self.src_dir.clone() + "/libs")
-                            .spawn();
-                        match wrapped_child {
-                            Ok(mut a ) => {let _ = a.wait();},
-                            Err(_) => return false
-                        };
+                            .spawn().unwrap();
+                        let _ = child.wait();
                     },
                     _ => todo!()
                 }
@@ -185,7 +157,7 @@ pub mod redoxr {
                     _ => {
                         let temp = self.src_dir.clone() + "/libs/mod.rs";
                         let path = Path::new(&temp);
-                        let _ = fs::write(&path, mod_file);
+                        let _ = fs::write(&path, mod_file).unwrap();
                     }
                 };
             }
@@ -194,33 +166,20 @@ pub mod redoxr {
                 compiling_command.arg(flag);
             }
 
-            let temp = compiling_command.spawn();
-                //.unwrap().wait();
-            match temp {
-                Ok(mut a) => {
-                    let _ = a.wait();
-                    return true;
-                },
-                Err(_) => false
-            };
-            true
+            let _temp = compiling_command.spawn().unwrap().wait();
+            self
         }
 
-        pub fn run(&self, args: &[&str]) -> bool {
+        pub fn run(self, args: &str) -> Self {
             let heh = self.root_dir.clone() + "/" + &self.out_dir + "/" + &self.out_name;
             println!("{}", &heh);
             let mut command = Command::new(&heh);
-            let child = command
+            let args_new = args.split_whitespace();
+            let _child = command
                 .current_dir(&self.root_dir)
-                .args(args)
-                .spawn();
-            match child {
-                Ok(mut a) => {
-                    let _ = a.wait();
-                    true
-                },
-                Err(_) => false,
-            }
+                .args(args_new)
+                .spawn().unwrap();
+            self
         }
 
         pub fn set_root_dir(mut self, dir: &str) -> Self {
@@ -263,35 +222,29 @@ pub mod redoxr {
         }
 
         pub fn add_lib(mut self, mut lib: Self) -> Self {
-            //println!("test1: {:?}", &lib);
             if lib.is_external {
-                //println!("test2: {:?}", &lib);
                 let path = self.root_dir.clone() + "git_reps";
                 if !Path::new(&path).exists() {
                     let _ = fs::create_dir("git_reps");
                 }
-                let _ = self.libraries.push(lib.get_git().clone());
-                //println!("test3: {:?}", &lib);
+                let _ = self.libraries.push(lib.get_git());
             } else {
-                //println!("test4: {:?}", &lib);
-                let mut ls_command = Command::new("ls");
-                let raw_output = ls_command.arg(&lib.root_dir).output().unwrap().stdout;
+                let mut git_command = Command::new("ls");
+                let raw_output = git_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
                 let output = str::from_utf8(&raw_output).unwrap().to_owned();
 
-                println!("output: {:?}, {:?}", &output, &raw_output);
                 let builder = {
                     if output.contains("Cargo.toml"){
                         CrateBuilder::Cargo
                     }
-                    else if output.contains("libredoxr.rlib") || output.contains("redoxr.rs") {
+                    else if output.contains("libredoxr.rlib") && output.contains("redoxr.rs") {
                         CrateBuilder::RedOxR
                     }
                     else {
-                        println!("Couldnt get the Crate Builder used for: {:?}", &lib);
-                        exit(99)
+                        exit(99);
                     }
                 };
-                let library = Library(builder, lib.name.clone(), lib.root_dir.clone());
+                let library = Library(builder, lib.name, lib.root_dir);
                 let _ = self.libraries.push(library);
             }
             self
@@ -339,8 +292,8 @@ pub mod redoxr {
             let _child = command
                 .arg("-u")
                 .arg("-p")
-                .arg(self.out_dir.to_owned() + "/" + &self.out_name)
-                .arg(path.to_owned() + "/" + &self.main_file)
+                .arg(&self.name)
+                .arg(path.to_owned() + "/" + &self.name)
                 .spawn()
                 .unwrap();
 
@@ -357,14 +310,7 @@ pub mod redoxr {
             self
         }
 
-        pub fn add_flag(mut self, flag: &[&str]) -> Self {
-            for i in flag {
-                self.rustc_flags.push(i.to_string());
-            }
-            self
-        }
-
-        pub fn add_flag_str(mut self, flag: &str) -> Self {
+        pub fn add_flag(mut self, flag: &str) -> Self {
             let raw_flags: String = flag.to_owned();
             let mut new_flags: Vec<String> = Vec::new();
             let mut start_slice: usize = 0;
@@ -417,7 +363,7 @@ pub mod redoxr {
     }
 }
 
-pub mod truck {
+pub mod redoxr_cargo {
     use std:: {
         env,
         fs,
