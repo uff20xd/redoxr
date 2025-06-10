@@ -37,6 +37,7 @@ pub mod redoxr {
 
         external_address: String,
         crate_builder: CrateBuilder,
+        external: bool,
     }
     
     impl RedOxR {
@@ -63,6 +64,7 @@ pub mod redoxr {
 
                 external_address: "".to_owned(),
                 crate_builder: CrateBuilder::RedOxR,
+                external: false,
             }
         }
 
@@ -83,6 +85,7 @@ pub mod redoxr {
 
                 external_address: address.to_owned(),
                 crate_builder: CrateBuilder::Cargo,
+                external: true,
             }
         }
 
