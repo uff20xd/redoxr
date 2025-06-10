@@ -14,7 +14,7 @@ pub mod redoxr {
     };
  
     #[derive(Debug, Clone)]
-    struct Library(pub CrateBuilder, pub String, pub String);
+    struct Library(pub CrateBuilder, pub String, pub String, pub String);
 
     #[derive(Debug, Clone)]
     enum CrateBuilder {
@@ -49,6 +49,7 @@ pub mod redoxr {
         external_address: String,
         crate_builder: CrateBuilder,
         is_external: bool,
+        get_from_output: Vec<String>,
 
         //processes: Vec<Child>,
     }
@@ -75,9 +76,10 @@ pub mod redoxr {
                 crate_builder: CrateBuilder::SingleFile,
                 is_external: false,
 
+                get_from_output: Vec::new(),
                 //processes: Vec::new(),
             };
-            build_script.libraries.push(Library(CrateBuilder::PreBuilt, "redoxr".to_owned(), ".".to_owned()));
+            build_script.libraries.push(Library(CrateBuilder::PreBuilt, "redoxr".to_owned(), ".".to_owned(), ".".to_owned()));
             build_script
         }
 
@@ -103,6 +105,8 @@ pub mod redoxr {
                 external_address: "".to_owned(),
                 crate_builder: CrateBuilder::RedOxR,
                 is_external: false,
+                
+                get_from_output: vec![name.to_owned()],
             }
         }
 
@@ -126,6 +130,8 @@ pub mod redoxr {
                 external_address: address.to_owned(),
                 crate_builder: CrateBuilder::Cargo,
                 is_external: true,
+
+                get_from_output: vec![name.to_owned()],
             }
         }
 
@@ -162,19 +168,19 @@ pub mod redoxr {
                         let _ = fs::create_dir(&self.src_dir);
                         let _ = fs::create_dir(self.src_dir.clone() + "/libs");
                         let mut cargo_command = Command::new("cargo");
-                        let mut cargo_child = cargo_command.current_dir(&crates.2).arg("build").arg("--release");
+                        let mut cargo_child = cargo_command.current_dir(&crates.2).arg("build").arg("--release").arg("--workspace");
                         dbg!(&cargo_child);
                         let _ = cargo_child.spawn().unwrap().wait();
 
                         let mut cp_command = Command::new("cp");
                         let mut cp_child = cp_command
                             .current_dir(&self.root_dir)
-                            .arg(crates.2.clone() + "/target/release/lib" + &crates.1 + ".rlib")
+                            .arg(crates.2.clone() + "/target/release/lib" + &crates.3 + ".rlib")
                             .arg(self.src_dir.clone() + "/libs");
                         dbg!(&cp_child);
                         let _ = cp_child.spawn().unwrap().wait();
 
-                        compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.1 + ".rlib");
+                        compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.3 + ".rlib");
                         dbg!(&compiling_command);
                     },
                     _ => todo!()
@@ -237,7 +243,7 @@ pub mod redoxr {
         }
 
         pub fn add_rlib(mut self, name: &str) -> Self {
-            let _ = self.libraries.push(Library(CrateBuilder::PreBuilt, name.to_owned(), self.src_dir.clone() + "/libs"));
+            let _ = self.libraries.push(Library(CrateBuilder::PreBuilt, name.to_owned(), self.src_dir.clone() + "/libs", "".to_owned()));
             self
         }
 
@@ -249,21 +255,25 @@ pub mod redoxr {
             let _ = child.spawn().unwrap().wait();
 
             let mut ls_command = Command::new("ls");
-            let raw_output = ls_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
+            let raw_output = ls_command.current_dir("git_reps/".to_owned() + &self.name).output().unwrap().stdout;
             let output = str::from_utf8(&raw_output).unwrap().to_owned();
+            dbg!(&output);
 
             let builder = {
                 if output.contains("Cargo.toml"){
+                    println!("lol 1");
                     CrateBuilder::Cargo
                 }
                 else if output.contains("libredoxr.rlib") && output.contains("redoxr.rs") {
+                    println!("lol 2");
                     CrateBuilder::RedOxR
                 }
                 else {
+                    println!("lol 3");
                     exit(99);
                 }
             };
-            Library(builder,self.name.clone() ,"git_reps/".to_owned() + &self.name)
+            Library(builder,self.name.clone() ,"git_reps/".to_owned() + &self.name, self.out_dir.clone())
         }
 
         pub fn add_lib(mut self, mut lib: Self) -> Self {
@@ -295,7 +305,7 @@ pub mod redoxr {
                         exit(99)
                     }
                 };
-                let library = Library(builder, lib.name.clone(), lib.root_dir.clone());
+                let library = Library(builder, lib.name.clone(), lib.root_dir.clone(), lib.out_name);
                 let _ = self.libraries.push(library);
             }
             self
