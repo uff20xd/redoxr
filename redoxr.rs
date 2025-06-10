@@ -140,7 +140,7 @@ pub mod redoxr {
 
             let mut compiling_command = Command::new("rustc");
             println!("main_file: {}/{}/{}",&self.root_dir, &self.src_dir, &self.main_file);
-            println!("libraries: {:?}", &self.libraries);
+            //println!("libraries: {:?}", &self.libraries);
 
             compiling_command.current_dir(&self.root_dir)
                 .arg(self.src_dir.clone() + "/" + &self.main_file)
@@ -152,8 +152,8 @@ pub mod redoxr {
             for crates in &self.libraries {
                 match crates.0 {
                     CrateBuilder::PreBuilt => {
-                        let test = crates.1.clone() + "=" + &crates.2 +"/lib" + &crates.1 +".rlib";
-                        println!("{}",test);
+                        //let _test = crates.1.clone() + "=" + &crates.2 +"/lib" + &crates.1 +".rlib";
+                        //println!("{}",test);
                         compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &crates.2 + "/lib" + &crates.1 + ".rlib");
                     },
                     CrateBuilder::Cargo => {
@@ -164,15 +164,15 @@ pub mod redoxr {
                         let _ = child.wait();
 
                         let mut cp_command = Command::new("cp");
-                        let wrapped_child = cp_command
+                        let mut child = cp_command
                             .current_dir(&self.root_dir)
                             .arg(crates.2.clone() + "/target/release/lib" + &crates.1 + ".rlib")
                             .arg(self.src_dir.clone() + "/libs")
-                            .spawn();
-                        match wrapped_child {
-                            Ok(mut a ) => {let _ = a.wait();},
-                            Err(_) => return false
-                        };
+                            .spawn().unwrap();
+                        let _ = child.wait();
+
+                        compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.1 + ".rlib");
+                        //dbg!(&compiling_command);
                     },
                     _ => todo!()
                 }
@@ -208,7 +208,7 @@ pub mod redoxr {
 
         pub fn run(&self, args: &[&str]) -> bool {
             let heh = self.root_dir.clone() + "/" + &self.out_dir + "/" + &self.out_name;
-            println!("{}", &heh);
+            //println!("{}", &heh);
             let mut command = Command::new(&heh);
             let child = command
                 .current_dir(&self.root_dir)
@@ -241,8 +241,9 @@ pub mod redoxr {
         fn get_git(&mut self) -> Library {
             let mut git_command = Command::new("git");
             git_command.arg("clone");
-            let mut child = git_command.arg(&self.external_address).arg(&self.name).spawn().unwrap();
-            let _ = child.wait();
+            let mut child = git_command.arg(&self.external_address).arg(&self.name);
+            dbg!(&child);
+            let _ = child.spawn().unwrap().wait();
 
             let mut git_command = Command::new("ls");
             let raw_output = git_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
@@ -278,7 +279,7 @@ pub mod redoxr {
                 let raw_output = ls_command.arg(&lib.root_dir).output().unwrap().stdout;
                 let output = str::from_utf8(&raw_output).unwrap().to_owned();
 
-                println!("output: {:?}, {:?}", &output, &raw_output);
+                //println!("output: {:?}, {:?}", &output, &raw_output);
                 let builder = {
                     if output.contains("Cargo.toml"){
                         CrateBuilder::Cargo

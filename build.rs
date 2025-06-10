@@ -16,18 +16,16 @@ fn main () {
 
     if !build.compile() {build.error()};
 
-    let _clap = RedOxR::external("external_lib", "https://github.com/clap-rs/clap.git");
+    let clap = RedOxR::external("clap", "https://github.com/clap-rs/clap.git");
     let add = RedOxR::root("crate_test", "crate_test").set_crate_builder("cargo");
 
     let main = RedOxR::root("test", ".")
         .set_src_dir("rustc_tests")
         .add_lib(add)
+        .add_lib(clap)
         //.add_rlib("crate_test")
         .set_system_target("x86_64-unknown-linux-gnu");
     
-
-    let _ = main.compile();
-
     if !main.compile() {main.error()};
     if !main.run(&[]) {main.error()};
 }
