@@ -1,7 +1,7 @@
 mod redoxr;
 use redoxr::redoxr::RedOxR;
 
-fn main () -> () {
+fn main () {
     let _build = RedOxR::build_script()
         .compile();
 
@@ -10,17 +10,16 @@ fn main () -> () {
         .set_main_file("redoxr.rs")
         .set_crate_type("lib")
         .set_system_target("x86_64-unknown-linux-gnu")
-        .copy_raw("crate-test")
+        //.copy_raw("crate-test")
         .compile();
-    
+
     let clap = RedOxR::external("external_lib", "https://github.com/clap-rs/clap.git");
 
-    let _main = RedOxR::root("test", ".")
+    let main = RedOxR::root("test", ".")
         .set_src_dir("rustc_tests")
         .add_rlib("crate_test")
-        .set_system_target("x86_64-unknown-linux-gnu")
-        .compile()
-        //.add_lib(clap)
-        .run("");
+        .set_system_target("x86_64-unknown-linux-gnu");
 
+    if !main.compile() {main.error()};
+    if !main.run(&[]) {main.error()};
 }
