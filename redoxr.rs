@@ -146,7 +146,9 @@ pub mod redoxr {
                 .arg(self.src_dir.clone() + "/" + &self.main_file)
                 .arg("--crate-type=".to_owned() + &self.crate_type)
                 .arg("--target=".to_owned() + &self.target)
-                .arg("-o".to_owned()).arg(out_file);
+                .arg("-o".to_owned()).arg(out_file)
+                .arg("-O");
+
 
             let mut mod_file = "".to_owned();
             for crates in &self.libraries {
@@ -160,19 +162,20 @@ pub mod redoxr {
                         let _ = fs::create_dir(&self.src_dir);
                         let _ = fs::create_dir(self.src_dir.clone() + "/libs");
                         let mut cargo_command = Command::new("cargo");
-                        let mut child = cargo_command.current_dir(&crates.2).arg("build").arg("--release").spawn().unwrap();
-                        let _ = child.wait();
+                        let mut cargo_child = cargo_command.current_dir(&crates.2).arg("build").arg("--release");
+                        dbg!(&cargo_child);
+                        let _ = cargo_child.spawn().unwrap().wait();
 
                         let mut cp_command = Command::new("cp");
-                        let mut child = cp_command
+                        let mut cp_child = cp_command
                             .current_dir(&self.root_dir)
                             .arg(crates.2.clone() + "/target/release/lib" + &crates.1 + ".rlib")
-                            .arg(self.src_dir.clone() + "/libs")
-                            .spawn().unwrap();
-                        let _ = child.wait();
+                            .arg(self.src_dir.clone() + "/libs");
+                        dbg!(&cp_child);
+                        let _ = cp_child.spawn().unwrap().wait();
 
                         compiling_command.arg("--extern").arg(crates.1.clone() + "=" + &self.src_dir + "/libs/lib" + &crates.1 + ".rlib");
-                        //dbg!(&compiling_command);
+                        dbg!(&compiling_command);
                     },
                     _ => todo!()
                 }
@@ -241,12 +244,12 @@ pub mod redoxr {
         fn get_git(&mut self) -> Library {
             let mut git_command = Command::new("git");
             git_command.arg("clone");
-            let mut child = git_command.arg(&self.external_address).arg(&self.name);
+            let child = git_command.current_dir("git_reps").arg(&self.external_address).arg(&self.name);
             dbg!(&child);
             let _ = child.spawn().unwrap().wait();
 
-            let mut git_command = Command::new("ls");
-            let raw_output = git_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
+            let mut ls_command = Command::new("ls");
+            let raw_output = ls_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
             let output = str::from_utf8(&raw_output).unwrap().to_owned();
 
             let builder = {
@@ -260,7 +263,7 @@ pub mod redoxr {
                     exit(99);
                 }
             };
-            Library(builder,self.name.clone() ,"git_reps/".to_owned() + &self.root_dir)
+            Library(builder,self.name.clone() ,"git_reps/".to_owned() + &self.name)
         }
 
         pub fn add_lib(mut self, mut lib: Self) -> Self {
