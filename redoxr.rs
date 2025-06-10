@@ -25,6 +25,7 @@ pub mod redoxr {
 
     pub struct RedOxR {
         name: String,
+        main_file: String,
         out_name: String,
         root_dir: String,
         src_dir: String,
@@ -37,22 +38,41 @@ pub mod redoxr {
 
         external_address: String,
         crate_builder: CrateBuilder,
-        external: bool,
+        is_external: bool,
     }
     
     impl RedOxR {
-        pub fn self_build(mut self) -> Self {
-            self.libraries.push(Library(CrateBuilder::PreBuilt, "redoxr".to_owned(), ".".to_owned()));
-            self.out_dir = ".".to_owned();
-            self.set_src_dir(".").set_crate_builder("single_file")
-        }
-
-        pub fn new (name: &str) -> Self {
-            Self {
-                name: name.to_owned() + ".rs",
-                out_name: name.to_owned(),
+        pub fn build_script() -> Self {
+            let mut build_script = Self {
+                name: "build".to_owned(),
+                main_file: "build.rs".to_owned(),
+                out_name: "build".to_owned(),
 
                 root_dir: ".".to_owned(),
+                src_dir: ".".to_owned(),
+
+                target: "x86_64-unknown-linux-gnu".to_owned(),
+                rustc_flags: Vec::new(),
+                crate_type: "bin".to_owned(),
+                out_dir: ".".to_owned(),
+
+                libraries: Vec::new(),
+
+                external_address: "".to_owned(),
+                crate_builder: CrateBuilder::SingleFile,
+                is_external: false,
+            };
+            build_script.libraries.push(Library(CrateBuilder::PreBuilt, "redoxr".to_owned(), ".".to_owned()));
+            build_script
+        }
+
+        pub fn root (name: &str, root: &str) -> Self {
+            Self {
+                name: name.to_owned(),
+                main_file: "main.rs".to_owned(),
+                out_name: name.to_owned(),
+
+                root_dir: root.to_owned(),
                 src_dir: "src".to_owned(),
 
                 target: "x86_64-unknown-linux-gnu".to_owned(),
@@ -64,14 +84,15 @@ pub mod redoxr {
 
                 external_address: "".to_owned(),
                 crate_builder: CrateBuilder::RedOxR,
-                external: false,
+                is_external: false,
             }
         }
 
         pub fn external (name: &str, address: &str) -> Self {
             Self {
-                name: name.to_owned() + ".rs",
-                out_name: name.to_owned() + ".rs",
+                name: name.to_owned(),
+                main_file: "lib.rs".to_owned(),
+                out_name: name.to_owned(),
 
                 root_dir: ".".to_owned(),
                 src_dir: "src".to_owned(),
@@ -85,20 +106,23 @@ pub mod redoxr {
 
                 external_address: address.to_owned(),
                 crate_builder: CrateBuilder::Cargo,
-                external: true,
+                is_external: true,
             }
         }
 
         pub fn compile (self) -> Self {
             let _ = fs::create_dir(self.root_dir.clone() + "/bin");
+            let out_file = self.out_dir.clone() + "/" + &self.out_name;
+
             let mut compiling_command = Command::new("rustc");
-            println!("{} {}", &self.src_dir, &self.name);
+            println!("{}/{}/{}",&self.root_dir, &self.src_dir, &self.main_file);
 
             compiling_command.current_dir(&self.root_dir)
-                .arg(self.src_dir.clone() + "/" + &self.name)
+                .arg(self.src_dir.clone() + "/" + &self.main_file)
                 .arg("--crate-type=".to_owned() + &self.crate_type)
                 .arg("--target=".to_owned() + &self.target)
-                .arg("--out-dir".to_owned()).arg(&self.out_dir);
+                .arg("-o".to_owned()).arg(out_file);
+
             let mut mod_file = "".to_owned();
             for crates in &self.libraries {
                 match crates.0 {
@@ -198,15 +222,40 @@ pub mod redoxr {
         }
 
         pub fn add_lib(mut self, mut lib: Self) -> Self {
-            let path = self.root_dir.clone() + "git_reps";
-            if !Path::new(&path).exists() {
-                let _ = fs::create_dir("git_reps");
+            if lib.is_external {
+                let path = self.root_dir.clone() + "git_reps";
+                if !Path::new(&path).exists() {
+                    let _ = fs::create_dir("git_reps");
+                }
+                let _ = self.libraries.push(lib.get_git());
+            } else {
+                let mut git_command = Command::new("ls");
+                let raw_output = git_command.arg(&self.external_address).arg(&self.name).output().unwrap().stdout;
+                let output = str::from_utf8(&raw_output).unwrap().to_owned();
+
+                let builder = {
+                    if output.contains("Cargo.toml"){
+                        CrateBuilder::Cargo
+                    }
+                    else if output.contains("libredoxr.rlib") && output.contains("redoxr.rs") {
+                        CrateBuilder::RedOxR
+                    }
+                    else {
+                        exit(99);
+                    }
+                };
+                let library = Library(builder, lib.name, lib.root_dir);
+                let _ = self.libraries.push(library);
             }
-            let _ = self.libraries.push(lib.get_git());
             self
         }
 
         pub fn set_crate_type (mut self, crate_type: &str) -> Self {
+            self.out_name = match crate_type {
+                "lib" => "lib".to_owned() + &self.name + ".rlib",
+                "bin" => self.name.clone(),
+                _ => todo!(),
+            };
             self.crate_type = crate_type.to_owned();
             self
         }
@@ -229,6 +278,11 @@ pub mod redoxr {
 
         pub fn set_output (mut self, file: &str) -> Self {
             self.out_dir = file.to_owned();
+            self
+        }
+
+        pub fn set_main_file (mut self, name: &str) -> Self {
+            self.main_file = name.to_owned();
             self
         }
 
