@@ -1,7 +1,9 @@
 mod test_lib;
+mod libs;
 use test_lib::factorial;
+use libs::crate_test::*;
 fn main() {
-    println!("{} ; {}",fibbonci(50), factorial(20));
+    println!("{} ; {} ; {}",fibbonci(50), factorial(20), add(1,1));
 }
 
 fn fibbonci (n: u64) -> u64 {
