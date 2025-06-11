@@ -187,7 +187,7 @@ pub mod redoxr {
                         let _ = fs::create_dir(&self.src_dir);
                         let _ = fs::create_dir(self.src_dir.clone() + "/libs");
                         let mut cargo_command = Command::new("cargo");
-                        let mut cargo_child = cargo_command.current_dir(&crates.path).arg("rustc").args(&["--crate-type=dylib", "--release", "--lib"]);
+                        let mut cargo_child = cargo_command.current_dir(&crates.path).args(&["build", "--crate-type=dylib", "--release", "--workspace"]);
                         dbg!(&cargo_child);
                         let _ = cargo_child.spawn().unwrap().wait();
 
@@ -351,6 +351,7 @@ pub mod redoxr {
                 "lib" => "lib".to_owned() + &self.name + ".rlib",
                 "bin" => self.name.clone(),
                 "dylib" => "lib".to_owned() + &self.name + ".so",
+                "staticlib" => "lib".to_owned() + &self.name + ".a",
                 _ => todo!(),
             };
             self.crate_type = crate_type.to_owned();
