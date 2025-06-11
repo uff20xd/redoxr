@@ -7,25 +7,27 @@ fn main () {
     let build = RedOxR::build_script();
     if !build.compile() {build.error()};
 
-    let _redoxr = RedOxR::root("redoxr", ".")
-        .set_src_dir(".")
+    let mut redoxr = RedOxR::root("redoxr", ".");
+    let _ = redoxr.set_src_dir(".")
         .set_main_file("redoxr.rs")
-        .set_crate_type("lib")
-        .set_system_target("x86_64-unknown-linux-gnu");
+        .set_crate_type("lib");
+        //.set_system_target("x86_64-unknown-linux-gnu");
         //.copy_raw("crate-test")
 
     if !build.compile() {build.error()};
 
-    let clap = RedOxR::external("clap", "https://github.com/clap-rs/clap.git").set_output("clap_complete");
-    let add = RedOxR::root("crate_test", "crate_test").set_crate_builder("cargo");
+    let mut clap = RedOxR::external("clap", "https://github.com/clap-rs/clap.git");
+    let mut add = RedOxR::root("crate_test", "crate_test");
+    let _ = add.set_crate_builder("cargo");
 
-    let main = RedOxR::root("test", ".")
+    let mut main = RedOxR::root("test", ".");
+        let _ = main
         .set_src_dir("rustc_tests")
-        .add_lib(add)
-        .add_lib(clap)
-        .add_flag(&["--extern", "clap_complete=rustc_tests/libs/libclap_complete.rlib"])
+        .add_lib(&mut add)
+        .add_lib(&mut clap);
+        //.add_flag(&["--extern", "clap_complete=rustc_tests/libs/libclap_complete.rlib"])
         //.add_rlib("crate_test")
-        .set_system_target("x86_64-unknown-linux-gnu");
+        //.set_system_target("x86_64-unknown-linux-gnu");
     
     if !main.compile() {main.error()};
     if !main.run(&[]) {main.error()};
