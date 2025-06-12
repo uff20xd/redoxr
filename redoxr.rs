@@ -151,7 +151,7 @@ pub mod redoxr {
 
                 get_from_output: vec![name.to_owned()],
             };
-            let _ = return_self.set_crate_type("dylib");
+            let _ = return_self.set_crate_type("staticlib");
             return_self
         }
 
@@ -187,17 +187,19 @@ pub mod redoxr {
                         let _ = fs::create_dir(&self.src_dir);
                         let _ = fs::create_dir(self.src_dir.clone() + "/libs");
                         let mut cargo_command = Command::new("cargo");
-                        let mut cargo_child = cargo_command.current_dir(&crates.path).args(&["build", "--crate-type=dylib", "--release", "--workspace"]);
+                        let mut cargo_child = cargo_command.current_dir(&crates.path).args(&["build", "--workspace", "--release" ]);
                         dbg!(&cargo_child);
                         let _ = cargo_child.spawn().unwrap().wait();
 
-                        let mut cp_command = Command::new("cp");
-                        let mut cp_child = cp_command
-                            .current_dir(&self.root_dir)
-                            .arg(crates.path.clone() + "/target/release/" + &crates.output_file )
-                            .arg(self.src_dir.clone() + "/libs");
-                        dbg!(&cp_child);
-                        let _ = cp_child.spawn().unwrap().wait();
+
+                        //replace with fs::copy
+
+                        let mut copy = fs::copy(
+                           self.root_dir.clone() + "/" + &crates.path + "/target/release/" + &crates.output_file,
+                           self.root_dir.clone() + "/" + &self.src_dir + "/libs/" + &crates.output_file
+                        );
+                        dbg!(&copy);
+                        let _ = copy.unwrap();
 
                         compiling_command.arg("--extern").arg(crates.name.clone() + "=" + &self.src_dir + "/libs/" + &crates.output_file);
                         dbg!(&compiling_command);
@@ -285,12 +287,12 @@ pub mod redoxr {
 
             let builder = {
                 if output.contains("Cargo.toml"){
-                    self.set_crate_type("dylib");
+                    self.set_crate_type("lib");
                     println!("lol 1");
                     CrateBuilder::Cargo
                 }
                 else if output.contains("libredoxr.rlib") && output.contains("redoxr.rs") {
-                    self.set_crate_type("dylib");
+                    self.set_crate_type("lib");
                     println!("lol 2");
                     CrateBuilder::RedOxR
                 }
@@ -329,7 +331,7 @@ pub mod redoxr {
                 //println!("output: {:?}, {:?}", &output, &raw_output);
                 let builder = {
                     if output.contains("Cargo.toml"){
-                        lib.set_crate_type("dylib");
+                        lib.set_crate_type("lib");
                         CrateBuilder::Cargo
                     }
                     else if output.contains("libredoxr.rlib") || output.contains("redoxr.rs") {
