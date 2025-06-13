@@ -53,6 +53,80 @@ pub mod redoxr {
     }
 
     // Implement Concept for better builds
+    
+    pub struct RedoxCrate {
+        name: String,
+        path: String,
+        external: Option<String>,
+        src_dir: String,
+    }
+
+    impl RedoxCrate {
+        pub fn empty() -> Self {
+            Self {
+                name: "".to_owned(),
+                path: "".to_owned(),
+                external: None,
+                src_dir: "".to_owned()
+            }
+        }
+
+        pub fn main<'a>(script: &'a mut Redoxr, src_dir: &str) -> &'a mut Self {
+            let mut call = Self {
+                name: "main".to_owned(),
+                path: ".".to_owned(),
+                external: None,
+                src_dir: src_dir.to_owned()
+            };
+            script.add_lib(call)
+        }
+    }
+
+    pub struct Redoxr {
+        name: String,
+        dependencies: Vec<RedoxCrate>,
+        rustc_flags: Vec<String>,
+        main: RedoxCrate,
+        crate_type: CrateType,
+        build_status: bool,
+    }
+    
+    impl Redoxr {
+        pub fn new(name: &str) -> Self {
+            let mut build_script = Self {
+                name: name.to_owned(),
+                dependencies: Vec::new(),
+                rustc_flags: Vec::new(),
+                main: RedoxCrate::empty(),
+                crate_type: CrateType::Bin,
+                build_status: true
+            };
+            build_script.build_status = build_script.compile_build_script();
+            build_script
+        }
+        fn compile_build_script(&self) -> bool {
+            let mut command = Command::new("rustc");
+            let mut child = command.arg("build.rs").spawn().unwrap();
+            match child.wait() {
+                Ok(mut value ) => {
+                    true
+                },
+                Err(value ) => {
+                    false
+                }
+            }
+        }
+        fn add_main(&mut self, main: RedoxCrate) -> &mut RedoxCrate {
+            self.main = main;
+            &mut self.main
+        }
+
+        fn add_lib (&mut self, lib: RedoxCrate) -> &mut RedoxCrate {
+            let index = self.dependencies.len();
+            self.dependencies.push(lib);
+            &mut self.dependencies[index]
+        }
+    }
 
     #[derive(Debug)]
     pub struct RedOxR {
