@@ -64,6 +64,7 @@ pub mod redoxr {
         main: RedoxCrate,
         crate_type: CrateType,
         build_status: bool,
+        cli_args: Vec<String>,
     }
     
     impl Redoxr {
@@ -74,7 +75,8 @@ pub mod redoxr {
                 rustc_flags: Vec::new(),
                 main: RedoxCrate::empty(),
                 crate_type: CrateType::Bin,
-                build_status: true
+                build_status: true,
+                cli_args: Vec::new(),
             };
             build_script.build_status = build_script.compile_build_script();
             build_script
@@ -83,10 +85,10 @@ pub mod redoxr {
             let mut command = Command::new("rustc");
             let mut child = command.arg("build.rs").spawn().unwrap();
             match child.wait() {
-                Ok(mut value ) => {
+                Ok(_value ) => {
                     true
                 },
-                Err(value ) => {
+                Err(_value ) => {
                     false
                 }
             }
@@ -102,7 +104,6 @@ pub mod redoxr {
             &mut self.dependencies[index]
         }
     }
-
 }
 
 pub mod truck {
