@@ -52,6 +52,8 @@ pub mod redoxr {
         Bin,
     }
 
+    // Implement Concept for better builds
+
     #[derive(Debug)]
     pub struct RedOxR {
         name: String,
