@@ -53,7 +53,7 @@ pub mod redoxr {
                 src_dir: src_dir.to_owned(),
                 refrence_counter: 0
             };
-            script.add_lib(call)
+            script.add_main(call)
         }
 
         pub fn compile(&self) {

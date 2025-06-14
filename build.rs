@@ -9,8 +9,10 @@ use redoxr::redoxr::{
 //use redoxr::redoxr::RedOxR;
 //use std::process::{Command, exit};
 fn main () {
-    let _build_script = Redoxr::new("test_bin");
-    let main_crate = RedoxCrate::main(&mut build_script, "src");
+    let mut build_script = Redoxr::new("test_bin");
+    let _main_crate = RedoxCrate::main(&mut build_script, "src");
+
+    if build_script.compile() {return ();}
 }
 
 //let build = Redoxr::build_script();
