@@ -1,11 +1,16 @@
 mod redoxr;
-use redoxr::redoxr::Redoxr;
+use redoxr::redoxr::{
+    Redoxr,
+    RedoxCrate,
+    RedoxArgs,
+};
+
 
 //use redoxr::redoxr::RedOxR;
 //use std::process::{Command, exit};
 fn main () {
     let _build_script = Redoxr::new("test_bin");
-    //let main_crate = RedoxCrate::main(&mut build_script, ".", "src");
+    let main_crate = RedoxCrate::main(&mut build_script, "src");
 }
 
 //let build = Redoxr::build_script();

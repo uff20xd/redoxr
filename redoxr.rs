@@ -5,12 +5,9 @@
 #![allow(dead_code)]
 pub mod redoxr {
     use std::{
-        fs,
-        path::Path,
-        process::{
+        env, fs, path::Path, process::{
             exit, Command, //Child,
-        }, 
-        str::{self},
+        }, str::{self}, sync::Arc
     };
  
     #[derive(Debug, Clone)]
@@ -34,6 +31,7 @@ pub mod redoxr {
         path: String,
         external: Option<String>,
         src_dir: String,
+        refrence_counter: u64,
     }
 
     impl RedoxCrate {
@@ -42,7 +40,8 @@ pub mod redoxr {
                 name: "".to_owned(),
                 path: "".to_owned(),
                 external: None,
-                src_dir: "".to_owned()
+                src_dir: "".to_owned(),
+                refrence_counter: 0
             }
         }
 
@@ -51,10 +50,22 @@ pub mod redoxr {
                 name: "main".to_owned(),
                 path: ".".to_owned(),
                 external: None,
-                src_dir: src_dir.to_owned()
+                src_dir: src_dir.to_owned(),
+                refrence_counter: 0
             };
             script.add_lib(call)
         }
+
+        pub fn compile(&self) {
+
+        }
+    }
+
+    pub enum RedoxArgs {
+        Build,
+        Run,
+        Get,
+        Custom(Option<String>),
     }
 
     pub struct Redoxr {
@@ -64,11 +75,40 @@ pub mod redoxr {
         main: RedoxCrate,
         crate_type: CrateType,
         build_status: bool,
-        cli_args: Vec<String>,
+        cli_args: RedoxArgs,
     }
     
     impl Redoxr {
         pub fn new(name: &str) -> Self {
+
+            let args = env::args().collect::<Vec<String>>();
+            let command = match args[0].to_lowercase().as_str() {
+                "build" => {
+                    if args.len() < 2 {
+                        RedoxArgs::Build
+                    }
+                    else {
+                        RedoxArgs::Build
+                    }
+                },
+                "run" => {
+                    if args.len() < 2 {
+                        RedoxArgs::Run
+                    }
+                    else {
+                        RedoxArgs::Run
+                    }
+                },
+                "get" => {RedoxArgs::Get},
+                _ => {
+                    if args.len() < 2 {
+                        RedoxArgs::Custom(None)
+                    }
+                    else {
+                        RedoxArgs::Custom(Some(args[1].clone()))
+                    }
+                }
+            };
             let mut build_script = Self {
                 name: name.to_owned(),
                 dependencies: Vec::new(),
@@ -76,10 +116,39 @@ pub mod redoxr {
                 main: RedoxCrate::empty(),
                 crate_type: CrateType::Bin,
                 build_status: true,
-                cli_args: Vec::new(),
+                cli_args: command,
             };
             build_script.build_status = build_script.compile_build_script();
             build_script
+        }
+        pub fn build (&mut self) -> bool {
+            match &self.cli_args {
+                RedoxArgs::Build => {
+                    self.compile()
+                },
+                RedoxArgs::Run => {
+                    true
+                },
+                RedoxArgs::Get => {
+                    true
+                },
+                RedoxArgs::Custom(_value) => {
+                    panic!("Option is not known!");
+                }
+            }
+        }
+        pub fn compile (&mut self) -> bool {
+            let mut compile_command = Command::new("rustc");
+            if !self.get_all_deps() {return false;}
+            let main_crate = &self.main;
+            let _ = compile_command.arg(main_crate.path.clone() + "/" + &main_crate.src_dir + "/main.rs").args(&["-O"]).spawn().unwrap().wait();
+            true
+        }
+        pub fn get () -> bool {
+            true
+        }
+        fn get_all_deps (&self) -> bool {
+            true
         }
         fn compile_build_script(&self) -> bool {
             let mut command = Command::new("rustc");
@@ -97,7 +166,6 @@ pub mod redoxr {
             self.main = main;
             &mut self.main
         }
-
         fn add_lib (&mut self, lib: RedoxCrate) -> &mut RedoxCrate {
             let index = self.dependencies.len();
             self.dependencies.push(lib);
