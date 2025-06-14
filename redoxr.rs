@@ -34,6 +34,7 @@ pub mod redoxr {
         refrence_counter: u64,
     }
 
+    /// Struct that defines a crate for as the main file or a dependency
     impl RedoxCrate {
         pub fn empty() -> Self {
             Self {
