@@ -175,6 +175,49 @@ pub mod redoxr {
     }
 }
 
+pub mod oxygen_cli {
+
+    #[derive(Clone)]
+    struct OxygenArg<T>
+        where T: FnMut() -> (){
+        arg_name: String,
+
+        action: T,
+    }
+    impl <T> OxygenArg<T>
+    where T: FnMut() -> () {
+        pub fn new(arg_name: &str, action: T) -> Self {
+            Self { arg_name: arg_name.to_string(), action}
+        }
+    }
+
+    #[derive(Clone)]
+    struct OxygenFlag {
+        long: String,
+    }
+
+    #[derive(Clone)]
+    pub struct OxygenCLI<A>(Vec<OxygenArg<A>>)
+        where A: FnMut() -> ();
+
+    impl<T> OxygenCLI<T>
+    where T: FnMut() -> () {
+
+        pub fn new() -> Self {
+            Self(Vec::new())
+        }
+        pub fn arg(&mut self, name: &str, action: T) -> &mut Self {
+            self.0.push(OxygenArg::new(name, action));
+            self
+        }
+        pub fn 
+        pub fn run() -> bool {
+
+            true
+        }
+    }
+}
+
 pub mod truck {
     use std:: {
         env,
