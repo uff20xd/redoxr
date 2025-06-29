@@ -177,6 +177,7 @@ pub mod redoxr {
 
 pub mod oxygen_cli {
 
+    #[derive(Clone)]
     enum OxygenCommandType {
         WithArg,
         NoArg,
@@ -184,6 +185,7 @@ pub mod oxygen_cli {
         HelpFlag,
     }
 
+    #[derive(Clone)]
     enum OxygenIOArgType {
         LongFlag,
         ShortFlag,
@@ -191,6 +193,7 @@ pub mod oxygen_cli {
         EndOfArgs,
     }
 
+    #[derive(Clone)]
     struct OxygenIOArg (pub String, pub OxygenIOArgType);
 
     #[derive(Clone)]
@@ -199,14 +202,14 @@ pub mod oxygen_cli {
             name: String,
             command_type: OxygenCommandType,
             description: String,
-            action: T,
-            children: Vec<OxygenCommand>,
+            action: A,
+            children: Vec<OxygenCommand<A>>,
     }
 
     impl <A> OxygenCommand<A>
     where A: FnMut() -> () {
-        pub fn new(name: &str, action: A) -> Self {
-            Self { name: name.to_string(), action}
+        pub fn new(name: &str, action: A, command_type: OxygenCommandType, description: String) -> Self {
+            Self { name: name.to_string(), action, command_type, description, children: Vec::new() }
 
         }
     }
@@ -225,15 +228,21 @@ pub mod oxygen_cli {
     pub struct OxygenCLI<A>
         where A: FnMut() -> () {
             commands: Vec<OxygenCommand<A>>,
-            help_flag
+            help_flag: String,
             flags: Vec<OxygenFlag>,
         }
 
     impl<A> OxygenCLI<A>
-    where T: FnMut() -> () {
+    where A: FnMut() -> () {
         pub fn new() -> Self {
-            let mut return_struct = Self(Vec::new());
-            return_struct.flag()
+            let mut return_struct = Self{
+                commands: Vec::new(),
+                help_flag: "".to_owned(),
+                flags: Vec::new(),
+            };
+
+            let _ = return_struct.flag();
+            return_struct
 
         }
         pub fn arg(&mut self, name: &str, action: A) -> &mut Self {
@@ -244,21 +253,25 @@ pub mod oxygen_cli {
             self
         }
 
-        fn help(&mut self) -> &mut Self {
+        fn help(&mut self) -> () {
             println!("Commands:");
-            for command in self.commands {
-                println!("\t{command.name} - {command.description}");
+            for command in &self.commands {
+                println!("\t{} - {}", command.name, command.description);
             }
 
-
             println!("\nFlags:");
-            for flag in self.flags {
-                println!("\t{flag.long} {flag.short} - {flag.description}");
+            for flag in &self.flags {
+                println!("\t{} {} - {}", flag.long, flag.short, flag.description);
             }
         }
 
         fn get_args () -> Vec<OxygenIOArg> {
+            let mut raw_args = std::env::args().collect::<Vec<String>>();
+            let mut output = Vec::new();
+            for arg in raw_args {
 
+            }
+            output
         }
 
         pub fn run() -> bool {
