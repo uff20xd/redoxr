@@ -81,7 +81,6 @@ pub mod redoxr {
     }
 
     pub struct Redoxr {
-        name: String,
         crates: Vec<RedoxCrate>,
         common_flags: Vec<String>,
         main: RedoxCrate,
