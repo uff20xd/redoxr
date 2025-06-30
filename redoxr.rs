@@ -190,6 +190,7 @@ pub mod oxygen_cli {
         LongFlag,
         ShortFlag,
         Command,
+        UserInput,
         EndOfArgs,
     }
 
@@ -246,7 +247,9 @@ pub mod oxygen_cli {
 
         }
         pub fn arg(&mut self, name: &str, action: A) -> &mut Self {
-            self.commands.push(OxygenCommand::new(name, action));
+            self.commands.push(
+                OxygenCommand::new(name, action, OxygenCommandType::NoArg, "No description provided".to_string())
+            );
             self
         }
         pub fn flag(&mut self) -> &mut Self {
@@ -269,7 +272,27 @@ pub mod oxygen_cli {
             let mut raw_args = std::env::args().collect::<Vec<String>>();
             let mut output = Vec::new();
             for arg in raw_args {
+                if arg.len() > 0 {
+                    if arg == "--help" || arg == "-h" {
 
+                        output.push(OxygenIOArg("help".to_string(), OxygenIOArgType::Command));
+
+                    }else if arg.starts_with("--") {
+
+                        output.push(OxygenIOArg(arg[2..].to_string(), OxygenIOArgType::LongFlag));
+
+                    } else if arg.starts_with("-") {
+
+                        output.push(OxygenIOArg(arg[1..].to_string(), OxygenIOArgType::ShortFlag));
+
+                    } else {
+
+                        output.push(OxygenIOArg(arg, OxygenIOArgType::Command));
+
+                    }
+                } else {
+                    output.push(OxygenIOArg("".to_string(), OxygenIOArgType::EndOfArgs));
+                }
             }
             output
         }
