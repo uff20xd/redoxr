@@ -57,8 +57,19 @@ pub mod redoxr {
             script.add_main(call)
         }
 
-        pub fn compile(&self) {
+        pub fn new<'a>(script: &'a mut Redoxr, root_dir: &str, src_dir: &str) -> &'a mut Self {
+            let mut call = Self {
+                name: "main".to_owned(),
+                path: root_dir.to_owned(),
+                external: None,
+                src_dir: src_dir.to_owned(),
+                refrence_counter: 0,
+            };
+            script.add_lib(call)
+        }
 
+        pub fn compile(&self) {
+            todo!();
         }
     }
 
@@ -71,8 +82,8 @@ pub mod redoxr {
 
     pub struct Redoxr {
         name: String,
-        dependencies: Vec<RedoxCrate>,
-        rustc_flags: Vec<String>,
+        crates: Vec<RedoxCrate>,
+        common_flags: Vec<String>,
         main: RedoxCrate,
         crate_type: CrateType,
         build_status: bool,
@@ -80,7 +91,7 @@ pub mod redoxr {
     }
     
     impl Redoxr {
-        pub fn new(name: &str) -> Self {
+        pub fn new() -> Self {
 
             let args = env::args().collect::<Vec<String>>();
             let command = match args[0].to_lowercase().as_str() {
@@ -111,9 +122,8 @@ pub mod redoxr {
                 }
             };
             let mut build_script = Self {
-                name: name.to_owned(),
-                dependencies: Vec::new(),
-                rustc_flags: Vec::new(),
+                crates: Vec::new(),
+                common_flags: Vec::new(),
                 main: RedoxCrate::empty(),
                 crate_type: CrateType::Bin,
                 build_status: true,
@@ -163,14 +173,15 @@ pub mod redoxr {
                 }
             }
         }
-        fn add_main(&mut self, main: RedoxCrate) -> &mut RedoxCrate {
+
+        fn add_main (&mut self, main: RedoxCrate) -> &mut RedoxCrate {
             self.main = main;
             &mut self.main
         }
         fn add_lib (&mut self, lib: RedoxCrate) -> &mut RedoxCrate {
-            let index = self.dependencies.len();
-            self.dependencies.push(lib);
-            &mut self.dependencies[index]
+            let index = self.crates.len();
+            self.crates.push(lib);
+            &mut self.crates[index]
         }
     }
 }
