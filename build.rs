@@ -10,10 +10,10 @@ use redoxr::redoxr::{
 //use std::process::{Command, exit};
 fn main () {
     //automatically self_compiles
-    let mut build_script = Redoxr::new();
-    let _main_crate = RedoxCrate::main(&mut build_script, "src");
+    let mut redoxr = Redoxr::new();
+    let _main_crate = RedoxCrate::main(&mut redoxr, "src");
 
-    if build_script.compile() {return ();}
+    if let Some(error) = redoxr.build() {return ();}
 }
 
 //let build = Redoxr::build_script();

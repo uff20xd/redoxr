@@ -7,13 +7,13 @@ fn main () -> () {
     
     let mut redoxr = Redoxr::new();
 
-    let mut clap = RedoxCrate::new(&mut redoxr, "clap")
-        .flag(COMMON_FLAGS);
+    let mut ron = CargoCrate::new(&mut redoxr, "ron");
+    let mut clap = CargoCrate::new(&mut redoxr, "clap");
+    let mut serde = CargoCrate::new(&mut redoxr, "serde");
 
-    let main_crate = RedoxCrate::main(&mut redoxr, "worseSaltz", "src")
-        .dependency(clap)
-        .flag(&["-O"]);
+    let main_crate = RedoxCrate::main(&mut redoxr, "test", "src")
+        .dependency(oxygencli)
+        .dependency(serde);
 
-    
-    if redoxr.compile() {return ();}
+    if let Some(error) = redoxr.finish() {error.panic()}
 }

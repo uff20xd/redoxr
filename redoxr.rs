@@ -16,59 +16,103 @@ pub mod redoxr {
         Cargo,
         RedOxR,
         PreBuilt,
-        None,
+        NoneAtAll,
+    }
+
+    #[derive(Debug)]
+    pub enum RedoxError {
+        Error
+    }
+    impl RedoxError {
+        pub fn panic (&self) -> () {
+            dbg!(self);
+            panic!("Error encountered at ...");
+        }
     }
 
     enum CrateType {
         Lib,
         Bin,
+        CargoLib,
+        CargoBin,
+        SelfmanagedLib,
+        SelfmanagedBin,
+        PrebuildLib,
+        Empty,
     }
 
     // Implement Concept for better builds
     
     pub struct RedoxCrate {
         name: String,
-        path: String,
-        external: Option<String>,
+        root: String,
         src_dir: String,
+
+        deps: Vec<u32>,
+        crate_type: CrateType,
+
+        id: u64,
         refrence_counter: u64,
+
+        external: Option<String>,
     }
 
     /// Struct that defines a crate for as the main file or a dependency
     impl RedoxCrate {
         pub fn empty() -> Self {
-            Self {
+            let mut call = Self {
                 name: "".to_owned(),
-                path: "".to_owned(),
-                external: None,
+                root: "".to_owned(),
                 src_dir: "".to_owned(),
-                refrence_counter: 0
-            }
+
+                deps: Vec::new(),
+                crate_type: CrateType::Empty,
+
+                id: 0,
+                refrence_counter: 0,
+
+                external: None,
+            };
+            call
         }
 
-        pub fn main<'a>(script: &'a mut Redoxr, src_dir: &str) -> &'a mut Self {
+        pub fn main<'a>(script: &'a mut Redoxr, name:&str) -> &'a mut Self {
             let mut call = Self {
-                name: "main".to_owned(),
-                path: ".".to_owned(),
+                name: name.to_owned(),
+                root: ".".to_owned(),
+                src_dir: "src".to_owned(),
+
+                deps: Vec::new(),
+                crate_type: CrateType::Lib,
+
+                id: 0,
+                refrence_counter: 0,
+
                 external: None,
-                src_dir: src_dir.to_owned(),
-                refrence_counter: 0
             };
             script.add_main(call)
         }
 
-        pub fn new<'a>(script: &'a mut Redoxr, root_dir: &str, src_dir: &str) -> &'a mut Self {
+        pub fn new<'a>(script: &'a mut Redoxr, name: &str) -> &'a mut Self {
             let mut call = Self {
-                name: "main".to_owned(),
-                path: root_dir.to_owned(),
-                external: None,
-                src_dir: src_dir.to_owned(),
+                name: name.to_owned(),
+                root: name.to_owned(),
+                src_dir: "src".to_owned(),
+
+                deps: Vec::new(),
+                crate_type: CrateType::Lib,
+
+                id: 0,
                 refrence_counter: 0,
+
+                external: None,
             };
             script.add_lib(call)
         }
-
-        pub fn compile(&self) {
+        pub fn cargo<'a>(script: &'a mut Redoxr, name: &str) -> &'a mut Self {
+            todo!();
+        }
+        pub fn compile(&self) -> Option<RedoxError> {
             todo!();
         }
     }
@@ -131,28 +175,28 @@ pub mod redoxr {
             build_script.build_status = build_script.compile_build_script();
             build_script
         }
-        pub fn build (&mut self) -> bool {
+        pub fn build(&mut self) -> Option<RedoxError> {
             match &self.cli_args {
                 RedoxArgs::Build => {
                     self.compile()
                 },
                 RedoxArgs::Run => {
-                    true
+                    None
                 },
                 RedoxArgs::Get => {
-                    true
+                    None
                 },
                 RedoxArgs::Custom(_value) => {
                     panic!("Option is not known!");
                 }
             }
         }
-        pub fn compile (&mut self) -> bool {
+        pub fn compile (&mut self) -> Option<RedoxError> {
             let mut compile_command = Command::new("rustc");
-            if !self.get_all_deps() {return false;}
+            if !self.get_all_deps() {return Some(RedoxError::Error);}
             let main_crate = &self.main;
-            let _ = compile_command.arg(main_crate.path.clone() + "/" + &main_crate.src_dir + "/main.rs").args(&["-O"]).spawn().unwrap().wait();
-            true
+            let _ = compile_command.arg(main_crate.root.clone() + "/" + &main_crate.src_dir + "/main.rs").args(&["-O"]).spawn().unwrap().wait();
+            None
         }
         pub fn get () -> bool {
             true
