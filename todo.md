@@ -5,40 +5,25 @@ This should be optional though.
 # Cargo compatibility
 i extern the lib using --extern and then add -L release and -L release/deps
 
+'''
 bin/
-
 |
-
 |---main
-
 |
-
 |---compiled/
-
 |   |
-
 |   |---liboxygencli.rlib
-
 |
-
 |---src/
-
     |
-
     |---main/
-
     |   |
-
     |   |---main.rs
-
     |
-
     |---oxygencli/
-
         |
-
         |---main.rs
-
+'''
 
 /////////////////main.rs////////////////////
 
