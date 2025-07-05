@@ -51,6 +51,8 @@ pub mod redoxr {
         deps: Vec<u32>,
         crate_type: CrateType,
 
+        flags: Vec<String>,
+
         id: u64,
         refrence_counter: u64,
 
@@ -67,6 +69,8 @@ pub mod redoxr {
 
                 deps: Vec::new(),
                 crate_type: CrateType::Empty,
+
+                flags: Vec::new(),
 
                 id: 0,
                 refrence_counter: 0,
@@ -85,6 +89,8 @@ pub mod redoxr {
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
 
+                flags: Vec::new(),
+
                 id: 0,
                 refrence_counter: 0,
 
@@ -102,6 +108,8 @@ pub mod redoxr {
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
 
+                flags: Vec::new(),
+
                 id: 0,
                 refrence_counter: 0,
 
@@ -113,7 +121,10 @@ pub mod redoxr {
             todo!();
         }
         pub fn compile(&self) -> Option<RedoxError> {
-            todo!();
+            let mut raw_compile_command = Command::new("rustc");
+            let mut compile_command = raw_compile_command.args(self.flags[..]);
+
+            None
         }
     }
 
