@@ -1,9 +1,5 @@
 mod redoxr;
-use redoxr::redoxr::{
-    Redoxr,
-    RedoxCrate,
-    RedoxArgs,
-};
+use redoxr::redoxr::*;
 
 
 //use redoxr::redoxr::RedOxR;
@@ -11,9 +7,8 @@ use redoxr::redoxr::{
 fn main () {
     //automatically self_compiles
     let mut redoxr = Redoxr::new();
-    let _main_crate = RedoxCrate::main(&mut redoxr, "src");
-
-    if let Some(error) = redoxr.build() {return ();}
+    let main_crate = RustCrate::main(&mut redoxr, "test").make_bin();
+    compile!(main_crate);
 }
 
 //let build = Redoxr::build_script();
