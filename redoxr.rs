@@ -72,10 +72,13 @@ pub mod redoxr {
         }, 
     };
  
-    #[derive(Clone)]
-    struct Mirror<T> (*mut T);
+    #[derive(Clone, Debug)]
+    pub struct Mirror<T> (*mut T);
     
     impl<T> Mirror<T> {
+        pub fn new() -> Self {
+
+        }
         pub fn borrow(&self) -> &T {
             unsafe {
                 &(*(self.0))
@@ -154,7 +157,7 @@ pub mod redoxr {
         output_file: String,
         is_output_crate: bool,
 
-        deps: Vec<Mirror<RustCrate>>,
+        deps: Vec<Mirror<RustCrate<'a>>>,
         crate_type: CrateType,
         crate_manager: CrateManager,
 
@@ -253,11 +256,19 @@ pub mod redoxr {
             } else {
                 output_path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.output_file;
             }
+            
+            let crate_type;
+            if self.is_bin() {
+                crate_type = "bin".to_owned();
+            } else {
+                crate_type = "lib".to_owned();
+            }
 
-            let mut dependency_flags: Vec<String> = Vec::new();
+            let mut dependency_flags: Vec<(String, String)> = Vec::new();
             for dependency in &self.deps {
-                if !dependency.is_compiled() {return Some(RedoxError::Error)}
-                dependency_flags.push(dependency.get_outpath());
+                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error)}
+                let dep = dependency.borrow();
+                dependency_flags.push(( dep.name.clone(), dep.get_outpath()));
 
                 #[cfg(debug)]
                 dbg!(&dependency);
@@ -268,16 +279,19 @@ pub mod redoxr {
                 .args(&self.flags[..])
                 .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
                 .args(&["-o", &output_path])
-                .args(&["-L", "bin/deps", "-L", "bin/"]);
+                .args(&["-L", "bin/deps", "-L", "bin/"])
+                .args(&["--crate-type", &crate_type]);
 
             for dependency in dependency_flags {
                 let _ = compile_command
-                    .args(&["--extern", &dependency]);
+                    .args(&["--extern", &(dependency.0.clone() + "=" + &dependency.1)]);
 
                 #[cfg(debug)]
                 dbg!(&dependency);
             }
 
+            #[cfg(debug)]
+            dbg!(&compile_command);
 
             let mut child = match compile_command.spawn() {
                 Ok(value) => {value},
@@ -336,8 +350,8 @@ pub mod redoxr {
             self
         }
 
-        pub fn depend_on(&mut self, dep: &'a RustCrate) -> &mut Self {
-            self.deps.push(Mirrot(dep));
+        pub fn depend_on(&mut self, dep: &'a mut RustCrate<'a>) -> &mut Self {
+            self.deps.push(Mirror(dep));
             self
         }
 
@@ -405,18 +419,16 @@ pub mod redoxr {
         }
     }
 
-    pub struct Redoxr {
-        common_flags: Vec<String>,
-        build_status: Option<RedoxError>,
+    pub struct Redoxr<'a> {
+        flags: Vec<&'a str>,
         cli_args: EmptyField,
     }
     
-    impl Redoxr {
+    impl Redoxr<'_> {
         pub fn new() -> Self {
             #[allow(unused_mut)]
             let mut build_script = Self {
-                common_flags: Vec::new(),
-                build_status: None,
+                flags: Vec::new(),
                 cli_args: EmptyField,
             };
             build_script
@@ -435,13 +447,17 @@ pub mod redoxr {
             }
         }
 
-        pub fn debug(self) -> Self {
+        pub fn debug(mut self) -> Self {
+            self.flags.push("--cfg");
+            self.flags.push("debug");
             self
         }
 
         pub fn self_compile(&self) -> Option<RedoxError> {
             let mut compile_command = Command::new("rustc");
-            let _ = compile_command.arg("build.rs");
+            let _ = compile_command.arg("build.rs")
+                .args(&self.flags[..]);
+
             let mut child = match compile_command.spawn() {
                 Ok(value) =>  {
                     value

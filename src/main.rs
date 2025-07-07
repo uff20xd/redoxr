@@ -2,10 +2,11 @@ mod test_lib;
 use test_lib::factorial;
 //mod libs;
 //use libs::crate_test::*;
-//extern crate redoxr;
+extern crate redoxr;
+
+use redoxr::redoxr::Mirror;
 
 fn main() {
-
     let mut test: i32 = 10;
     let mut mirrot_test = Mirror(&mut test);
     test += 1;
@@ -27,23 +28,4 @@ fn fibbonci (n: u64) -> u64 {
         c = a + b;
     }
     a
-}
-
-#[derive(Clone)]
-struct Mirror<T> (*mut T);
-
-impl<T> Mirror<T> {
-    pub fn borrow(&self) -> &T {
-        unsafe {
-            &(*(self.0))
-        }
-    }
-    pub fn borrow_mut(&mut self) -> &mut T {
-        unsafe {
-            &mut (*(self.0))
-        }
-    }
-    pub fn defer(self) {
-        let _ = self;
-    }
 }
