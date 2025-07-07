@@ -6,6 +6,7 @@ use redoxr::redoxr::*;
 //use std::process::{Command, exit};
 fn main () {
 
+    dbg!(COMP_VERSION);
     //automatically self_compiles
     let redoxr = Redoxr::new();
     handle!(redoxr, self_compile);
@@ -20,6 +21,7 @@ fn main () {
 
     compile!(redoxr_lib);
     let mut main_crate = RustCrate::new("test", ".")
+        .flags(&["--edition", "2024"])
         .set_root(".")
         .make_bin() 
         .make_output()

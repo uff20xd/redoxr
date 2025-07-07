@@ -36,7 +36,7 @@
 //
 //fn main() -> () {
 //    let mut redoxr = Redoxr::new();
-//    let mut dependency = RustCrate::from_cargo(&mut redoxr, "clap");
+//    let mut dependency = RustCrate::from_cargo("clap", "clap");
 //
 //    if let Some(error) = dependency.compile() {error.panic()}
 //
@@ -49,14 +49,30 @@
 //################
 //
 //The compile! macro just expands to the whole if-let-then-panic-statement.
-//
-//Redoxr-buildscripts usually automatically rebuild themselves, when the
-//Redoxr-struct is constructed. This can be disabled by passing the --cfg no_rebuild flag.
 //====================================================================
 
 #![allow(dead_code)]
 
 pub mod redoxr {
+
+    #[cfg(not(comp_version_2024))]
+    #[cfg(not(comp_version_2024))]
+    #[cfg(not(comp_version_2024))]
+    #[cfg(not(comp_version_2024))]
+    pub const COMP_VERSION: &[&str] = &[];
+
+    #[cfg(comp_version_2024)]
+    pub const COMP_VERSION: &[&str] = &["--edition", "2024"];
+
+    #[cfg(comp_version_2021)]
+    pub const COMP_VERSION: &[&str] = &["--edition", "2021"];
+
+    #[cfg(comp_version_2018)]
+    pub const COMP_VERSION: &[&str] = &["--edition", "2018"];
+
+    #[cfg(comp_version_2015)]
+    pub const COMP_VERSION: &[&str] = &["--edition", "2015"];
+
     #[cfg(target_os = "linux")]
     pub const PATH_SEPERATOR: &'static str = r"/";
     
@@ -137,41 +153,17 @@ pub mod redoxr {
         fn dependency<T>(&mut self, dep: T) -> &mut Self
             where T: RedoxrCompatible;
         //fn get_outputs(&self) -> String;
+        fn flags(&mut self) -> &mut Self;
         fn is_output_file(&self) -> bool;
         fn is_compiled(&self) -> bool;
         fn is_bin(&self) -> bool;
         fn is_lib(&self) -> bool;
         fn get_outpath(&self) -> String;
         fn get_name(&self) -> String;
+        fn stay(&mut self) -> Self;
     }
     // Implement Concept for better builds
     
-
-    ///A Struct that defines a Rust Crate managed by any build system
-    #[derive(Clone, Debug)]
-    pub struct RustCrate<'a> {
-        name: String,
-        root: String,
-        src_dir: String,
-        main_file: String,
-        output_file: String,
-        is_output_crate: bool,
-
-        deps: Vec<Mirror<RustCrate<'a>>>,
-        crate_type: CrateType,
-        crate_manager: CrateManager,
-
-        flags: Vec<String>,
-        compiled: bool,
-
-        refrence_counter: u64,
-
-
-        //currently unused
-        id: u64,
-        external: Option<String>,
-    }
-
     ///A macro so you don't have to type out the entire if-let-statement.
     ///Takes the crate to compile as input.
     #[macro_export]
@@ -187,6 +179,31 @@ pub mod redoxr {
         ($comp_file:ident) => {
             if let Some(error) = ($comp_file).run() {error.panic()}
         }
+    }
+
+    ///A Struct that defines a Rust Crate managed by any build system
+    #[derive(Clone, Debug)]
+    pub struct RustCrate<'a> {
+        name: String,
+        root: String,
+        src_dir: String,
+        main_file: String,
+        output_file: String,
+        is_output_crate: bool,
+
+        deps: Vec<Mirror<RustCrate<'a>>>,
+        crate_type: CrateType,
+        crate_manager: CrateManager,
+
+        flags: Vec<&'a str>,
+        compiled: bool,
+
+        refrence_counter: u64,
+
+
+        //currently unused
+        id: u64,
+        external: Option<String>,
     }
 
     /// Struct that defines a crate for as the main file or a dependency
@@ -276,6 +293,7 @@ pub mod redoxr {
 
             let mut compile_command = Command::new("rustc");
             let _ = compile_command
+                .args(COMP_VERSION)
                 .args(&self.flags[..])
                 .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
                 .args(&["-o", &output_path])
@@ -393,6 +411,13 @@ pub mod redoxr {
             self.name.clone()
         }
 
+        pub fn flags (&mut self, flags: &[&'a str]) -> &mut Self {
+            for flag in flags {
+                self.flags.push(flag);
+            }
+            self
+        }
+
         pub fn run(&self) -> Option<RedoxError> {
             if !self.is_compiled() {return Some(RedoxError::NotCompiled)}
             if !self.is_bin() {return Some(RedoxError::NotExecutable)}
@@ -456,6 +481,7 @@ pub mod redoxr {
         pub fn self_compile(&self) -> Option<RedoxError> {
             let mut compile_command = Command::new("rustc");
             let _ = compile_command.arg("build.rs")
+                .args(COMP_VERSION)
                 .args(&self.flags[..]);
 
             let mut child = match compile_command.spawn() {
