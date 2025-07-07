@@ -76,8 +76,8 @@ pub mod redoxr {
     pub struct Mirror<T> (*mut T);
     
     impl<T> Mirror<T> {
-        pub fn new() -> Self {
-
+        pub fn new(pointer: *mut T) -> Self {
+            Self(pointer)
         }
         pub fn borrow(&self) -> &T {
             unsafe {
