@@ -5,6 +5,14 @@ use test_lib::factorial;
 //extern crate redoxr;
 
 fn main() {
+
+    let mut test: i32 = 10;
+    let mut mirrot_test = Mirror(&mut test);
+    test += 1;
+    *mirrot_test.borrow_mut() += 5;
+
+    println!("{} ; {}", &test, mirrot_test.borrow());
+    mirrot_test.defer();
     println!("{} ; {}",fibbonci(50), factorial(20));
 }
 
@@ -21,11 +29,21 @@ fn fibbonci (n: u64) -> u64 {
     a
 }
 
-struct MutMirror<T>
+#[derive(Clone)]
+struct Mirror<T> (*mut T);
 
-{
-    
-        pointer: *mut T,
-
-
+impl<T> Mirror<T> {
+    pub fn borrow(&self) -> &T {
+        unsafe {
+            &(*(self.0))
+        }
+    }
+    pub fn borrow_mut(&mut self) -> &mut T {
+        unsafe {
+            &mut (*(self.0))
+        }
+    }
+    pub fn defer(self) {
+        let _ = self;
+    }
 }
