@@ -4,6 +4,8 @@ use redoxr::redoxr::*;
 
 //use redoxr::redoxr::RedOxR;
 //use std::process::{Command, exit};
+
+//TODO: implement auto reflaging for the buildscript
 fn main () {
 
     //automatically self_compiles
