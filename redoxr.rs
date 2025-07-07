@@ -22,7 +22,10 @@
 //
 //fn main() -> () {
 //    let mut redoxr = Redoxr::new();
-//    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate");
+//    handle!(redoxr self_compile);
+//    handle!(redoxr setup_env);
+//
+//    let mut main_crate = RustCrate::main( "some_crate");
 //    if let Some(error) = main_crate.compile() {error.panic()};
 //}
 //################

@@ -9,8 +9,8 @@ fn main () {
     dbg!(COMP_VERSION);
     //automatically self_compiles
     let redoxr = Redoxr::new();
-    handle!(redoxr, self_compile);
-    handle!(redoxr, setup_env);
+    handle!(redoxr self_compile);
+    handle!(redoxr setup_env);
 
     let mut redoxr_lib = RustCrate::new("redoxr", ".")
         .make_lib()
