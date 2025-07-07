@@ -122,6 +122,8 @@ pub mod redoxr {
         name: String,
         root: String,
         src_dir: String,
+        main_file: String,
+        output_file: String,
         is_output_crate: bool,
 
         deps: Vec<&'a RustCrate<'a>>,
@@ -155,6 +157,8 @@ pub mod redoxr {
                 name: "".to_owned(),
                 root: "".to_owned(),
                 src_dir: "".to_owned(),
+                main_file: "".to_owned(),
+                output_file: "".to_owned(),
                 is_output_crate: false,
 
                 deps: Vec::new(),
@@ -177,6 +181,8 @@ pub mod redoxr {
                 name: name.to_owned(),
                 root: name.to_owned(),
                 src_dir: "src".to_owned(),
+                main_file: "main.rs".to_owned(),
+                output_file: name.to_owned(),
                 is_output_crate: false,
 
                 deps: Vec::new(),
@@ -198,37 +204,39 @@ pub mod redoxr {
             todo!()
         }
 
-        pub fn compile(&self) -> Option<RedoxError> {
-
-            let main_file_name: &str;
-            match self.crate_type {
-                CrateType::Lib => {
-                    main_file_name = "lib.rs";
-                },
-                CrateType::Bin => {
-                    main_file_name = "main.rs";
-                },
-                _ => {panic!("This Type isnt supported yet")}
-            }
+        pub fn compile(&mut self) -> Option<RedoxError> {
 
             let output_path: String;
             if self.is_output_crate {
-                output_path = "bin".to_owned() + PATH_SEPERATOR + &self.name;
+                output_path = "bin".to_owned() + PATH_SEPERATOR + &self.output_file;
             } else {
-                output_path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.name;
+                output_path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.output_file;
             }
 
             let mut dependency_flags: Vec<String> = Vec::new();
             for dependency in &self.deps {
                 if !dependency.is_compiled() {return Some(RedoxError::Error)}
-                dependency_flags.push(dependency.get_outpath())
+                dependency_flags.push(dependency.get_outpath());
+
+                #[cfg(debug)]
+                dbg!(&dependency);
             }
 
             let mut compile_command = Command::new("rustc");
             let _ = compile_command
                 .args(&self.flags[..])
-                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + main_file_name)
-                .args(&["-o", &output_path]);
+                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
+                .args(&["-o", &output_path])
+                .args(&["-L", "bin/deps", "-L", "bin/"]);
+
+            for dependency in dependency_flags {
+                let _ = compile_command
+                    .args(&["--extern", &dependency]);
+
+                #[cfg(debug)]
+                dbg!(&dependency);
+            }
+
 
             let mut child = match compile_command.spawn() {
                 Ok(value) => {value},
@@ -236,7 +244,10 @@ pub mod redoxr {
             };
 
             match child.wait() {
-                Ok(_) => {None},
+                Ok(_) => {
+                    self.compiled = true;
+                    None
+                },
                 Err(_) => {Some(RedoxError::Error)},
             }
         }
@@ -256,9 +267,11 @@ pub mod redoxr {
                 CrateType::Bin => {CrateType::Bin},
                 CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")}
             };
+            self.output_file = self.name.clone();
             self
         }
 
+        ///This function is not meant to be used as RustCrates start as a lib
         pub fn make_lib(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
                 CrateType::Lib => {CrateType::Lib},
@@ -268,8 +281,28 @@ pub mod redoxr {
             self
         }
 
+        pub fn dependency(&mut self, dep: &&'a RustCrate) -> &mut Self {
+            self.deps.push(dep);
+            self
+        }
+
         pub fn set_root(&mut self, new_root: &str) -> &mut Self {
             self.root = new_root.to_owned();
+            self
+        }
+
+        pub fn set_src(&mut self, new_src: &str) -> &mut Self {
+            self.src_dir = new_src.to_owned();
+            self
+        }
+
+        pub fn set_main(&mut self, new_main: &str) -> &mut Self {
+            self.main_file = new_main.to_owned();
+            self
+        }
+        
+        pub fn set_output_file(&mut self, new_output: &str) -> &mut Self {
+            self.output_file = new_output.to_owned();
             self
         }
 
