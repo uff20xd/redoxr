@@ -5,7 +5,7 @@ use test_lib::factorial;
 use redoxr::redoxr::Mirror;
 
 fn main() {
-    let mut fact = factorial(100);
+    let mut fact = factorial(10);
     let _ = Mirror::new(&mut fact);
     println!("{} ; {}", fibbonaci(50), factorial(20));
 }

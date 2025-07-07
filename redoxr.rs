@@ -44,7 +44,7 @@
 //    if let Some(error) = dependency.compile() {error.panic()}
 //
 //    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate").
-//        .dependency(dependecy.clone());
+//        .depend_on(dependecy.clone());
 //
 //    //There is also this macro that compiles dependencies.
 //    compile!(main_crate);
@@ -52,6 +52,12 @@
 //################
 //
 //The compile! macro just expands to the whole if-let-then-panic-statement.
+//
+//The dependency list uses the incredible Mirror technology (just a semi-safe wrapper around raw
+//pointer), which allows for dependencies to be built after being passed as such while still being
+//able to handle errors.
+//Currently that is most of the magic, but soon I will implement the version that uses traits,
+//making it expandable to other languages easily as long as I write it correctly.
 //====================================================================
 
 #![allow(dead_code)]
