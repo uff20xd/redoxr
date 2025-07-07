@@ -72,6 +72,25 @@ pub mod redoxr {
         }, 
     };
  
+    #[derive(Clone)]
+    struct Mirror<T> (*mut T);
+    
+    impl<T> Mirror<T> {
+        pub fn borrow(&self) -> &T {
+            unsafe {
+                &(*(self.0))
+            }
+        }
+        pub fn borrow_mut(&mut self) -> &mut T {
+            unsafe {
+                &mut (*(self.0))
+            }
+        }
+        pub fn defer(self) {
+            let _ = self;
+        }
+    }
+
     #[derive(Debug, Clone)]
     enum CrateBuilder {
         SingleFile,
@@ -135,7 +154,7 @@ pub mod redoxr {
         output_file: String,
         is_output_crate: bool,
 
-        deps: Vec<&'a RustCrate<'a>>,
+        deps: Vec<Mirror<RustCrate>>,
         crate_type: CrateType,
         crate_manager: CrateManager,
 
@@ -317,8 +336,8 @@ pub mod redoxr {
             self
         }
 
-        pub fn dependency(&mut self, dep: &&'a RustCrate) -> &mut Self {
-            self.deps.push(dep);
+        pub fn depend_on(&mut self, dep: &'a RustCrate) -> &mut Self {
+            self.deps.push(Mirrot(dep));
             self
         }
 
