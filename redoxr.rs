@@ -458,7 +458,7 @@ pub mod redoxr {
         cli_args: EmptyField,
     }
     
-    impl Redoxr<'_> {
+    impl<'a> Redoxr<'a> {
         pub fn new() -> Self {
             #[allow(unused_mut)]
             let mut build_script = Self {
@@ -466,6 +466,13 @@ pub mod redoxr {
                 cli_args: EmptyField,
             };
             build_script
+        }
+
+        pub fn flags(mut self, flags: &[&'a str]) -> Self {
+            for flag in flags {
+                self.flags.push(flag);
+            }
+            self
         }
 
         pub fn setup_env(&self) -> Option<RedoxError> {
@@ -513,6 +520,7 @@ pub mod redoxr {
     }
 }
 
+#[allow(unused_variables)]
 pub mod oxygen_cli {
 
     #[cfg(target_os = "linux")]
@@ -542,20 +550,29 @@ pub mod oxygen_cli {
     struct OxygenIOArg (pub String, pub OxygenIOArgType);
 
     #[derive(Clone)]
-    struct OxygenCommand<A>
-        where A: FnMut() -> (){
+    struct OxygenCommand {
             name: String,
             command_type: OxygenCommandType,
             description: String,
-            action: A,
-            children: Vec<OxygenCommand<A>>,
+            children: Vec<OxygenCommand>,
     }
 
-    impl <A> OxygenCommand<A>
-    where A: FnMut() -> () {
-        pub fn new(name: &str, action: A, command_type: OxygenCommandType, description: String) -> Self {
-            Self { name: name.to_string(), action, command_type, description, children: Vec::new() }
+    impl OxygenCommand
+     {
+        pub fn new(name: &str, command_type: OxygenCommandType, description: String) -> Self {
+            Self { name: name.to_owned(), command_type, description, children: Vec::new() }
+        }
 
+        pub fn arg(&self, pos: usize) -> String {
+            todo!()
+        }
+
+        pub fn is_arg(&self, pos: usize, equal: &str) -> bool {
+            todo!()
+        }
+
+        pub fn is_null(&self) -> bool {
+            todo!()
         }
     }
 
@@ -570,29 +587,31 @@ pub mod oxygen_cli {
     }
 
     #[derive(Clone)]
-    pub struct OxygenCLI<A>
-        where A: FnMut() -> () {
-            commands: Vec<OxygenCommand<A>>,
-            help_flag: String,
+    pub struct OxygenCLI {
+            commands: Vec<OxygenCommand>,
             flags: Vec<OxygenFlag>,
+            command_pointer: Vec<usize>,
+            base_type: OxygenCommandType,
         }
 
-    impl<A> OxygenCLI<A>
-    where A: FnMut() -> () {
+    impl OxygenCLI
+     {
         pub fn new() -> Self {
             let mut return_struct = Self{
                 commands: Vec::new(),
-                help_flag: "".to_owned(),
                 flags: Vec::new(),
+                command_pointer: Vec::new(),
+                base_type: OxygenCommandType::ParentCommand,
             };
 
             let _ = return_struct.flag();
             return_struct
 
         }
-        pub fn arg(&mut self, name: &str, action: A) -> &mut Self {
+        pub fn add_command<A>(&mut self, name: &str, action: A) -> &mut Self
+            where A: FnMut() -> () {
             self.commands.push(
-                OxygenCommand::new(name, action, OxygenCommandType::NoArg, "No description provided".to_string())
+                OxygenCommand::new(name, OxygenCommandType::NoArg, "No description provided".to_string())
             );
             self
         }
@@ -612,7 +631,8 @@ pub mod oxygen_cli {
             }
         }
 
-        fn get_args () -> Vec<OxygenIOArg> {
+        fn resolve() -> Vec<OxygenIOArg> {
+
             let raw_args = std::env::args().collect::<Vec<String>>();
             let mut output = Vec::new();
             for arg in raw_args {
@@ -640,12 +660,7 @@ pub mod oxygen_cli {
             }
             output
         }
-
-        pub fn run() -> bool {
-            true
-        }
-    }
-
+   }
 }
 
 pub mod truck {

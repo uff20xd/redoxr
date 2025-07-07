@@ -2,6 +2,7 @@ mod test_lib;
 use test_lib::factorial;
 //mod libs;
 //use libs::crate_test::*;
+extern crate redoxr;
 use redoxr::redoxr::Mirror;
 
 fn main() {
