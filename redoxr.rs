@@ -15,6 +15,7 @@
 //be able to easily extend it to any other language using "intelligent trait usage".
 //
 //Basic Usage:
+//
 //####build.rs####
 //mod redoxr;
 //use redoxr::redoxr::*;
@@ -26,7 +27,9 @@
 //}
 //################
 //
-//With dependencies:
+//You can add dependencies just by using .dependency(dependency).
+//(For this you currently need to compile the dependency first):
+//
 //####build.rs####
 //mod redoxr;
 //use redoxr::redoxr::*;
@@ -35,22 +38,23 @@
 //    let mut redoxr = Redoxr::new();
 //    let mut dependency = RustCrate::from_cargo(&mut redoxr, "clap");
 //
-//    if let Some(error) = 
+//    if let Some(error) = dependency.compile() {error.panic()}
 //
 //    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate").
 //        .dependency(dependecy.clone());
 //
+//    //There is also this macro that compiles dependencies.
+//    compile!(main_crate);
 //}
 //################
 //
+//The compile! macro just expands to the whole if-let-then-panic-statement.
+//
+//Redoxr-buildscripts usually automatically rebuild themselves, when the
+//Redoxr-struct is constructed. This can be disabled by passing the --cfg no_rebuild flag.
 //====================================================================
+
 #![allow(dead_code)]
-
-#[cfg(target_os = "linux")]
-pub const PATH_SEPERATOR: &'static str = r"/";
-
-#[cfg(target_os = "windows")]
-pub const PATH_SEPERATOR: &'static str = r"\";
 
 pub mod redoxr {
     #[cfg(target_os = "linux")]
@@ -79,7 +83,8 @@ pub mod redoxr {
 
     #[derive(Debug)]
     pub enum RedoxError {
-        Error
+        Error,
+        WrongCrateType,
     }
     impl RedoxError {
         pub fn panic (&self) -> () {
@@ -91,30 +96,40 @@ pub mod redoxr {
     enum CrateType {
         Lib,
         Bin,
-        CargoLib,
-        CargoBin,
-        RedoxManagedBin,
-        RedoxManagedLib,
         Empty,
     }
 
+    enum CrateManager {
+        Redoxr,
+        ExternalRedoxr,
+        Cargo,
+    }
+
     pub trait RedoxrCompatible {
-        fn empty() -> Self;
         fn compile(&self) -> Option<RedoxError>;
-        fn get_outputs(&self) -> String;
+        fn dependency<T>(&mut self, dep: T) -> &mut Self
+            where T: RedoxrCompatible;
+        //fn get_outputs(&self) -> String;
+        fn is_output_file(&self) -> bool;
+        fn is_compiled(&self) -> bool;
+        fn get_outpath(&self) -> String;
+        fn get_name(&self) -> String;
     }
     // Implement Concept for better builds
     
     ///A Struct that defines a Rust Crate managed by any build system
-    pub struct RustCrate {
+    pub struct RustCrate<'a> {
         name: String,
         root: String,
         src_dir: String,
+        is_output_crate: bool,
 
-        deps: Vec<u32>,
+        deps: Vec<&'a RustCrate<'a>>,
         crate_type: CrateType,
+        crate_manager: CrateManager,
 
         flags: Vec<String>,
+        compiled: bool,
 
         refrence_counter: u64,
 
@@ -134,15 +149,18 @@ pub mod redoxr {
     }
 
     /// Struct that defines a crate for as the main file or a dependency
-    impl RustCrate {
+    impl<'a> RustCrate<'a> {
         pub fn empty() -> Self {
             let call = Self {
                 name: "".to_owned(),
                 root: "".to_owned(),
                 src_dir: "".to_owned(),
+                is_output_crate: false,
 
                 deps: Vec::new(),
                 crate_type: CrateType::Empty,
+                crate_manager: CrateManager::Redoxr,
+                compiled: false,
 
                 flags: Vec::new(),
 
@@ -154,33 +172,17 @@ pub mod redoxr {
             call
         }
 
-        pub fn main<'a>(script: &'a mut Redoxr, name:&str) -> &'a mut Self {
-            let call = Self {
-                name: name.to_owned(),
-                root: ".".to_owned(),
-                src_dir: "src".to_owned(),
-
-                deps: Vec::new(),
-                crate_type: CrateType::Lib,
-
-                flags: Vec::new(),
-
-                id: 0,
-                refrence_counter: 0,
-
-                external: None,
-            };
-            script.set_main(call)
-        }
-
-        pub fn new<'a>(script: &'a mut Redoxr, name: &str) -> &'a mut Self {
+        pub fn new(script: &'a mut Redoxr<'a>, name: &str) -> &'a mut Self {
             let call = Self {
                 name: name.to_owned(),
                 root: name.to_owned(),
                 src_dir: "src".to_owned(),
+                is_output_crate: false,
 
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
+                crate_manager: CrateManager::Redoxr,
+                compiled: false,
 
                 flags: Vec::new(),
 
@@ -192,7 +194,7 @@ pub mod redoxr {
             script.add_crate(call)
         }
 
-        pub fn from_cargo<'a>(_script: &'a mut Redoxr, _name: &str) -> &'a mut Self {
+        pub fn from_cargo(_script: &'a mut Redoxr, _name: &str) -> &'a mut Self {
             todo!()
         }
 
@@ -200,7 +202,6 @@ pub mod redoxr {
 
             let main_file_name: &str;
             match self.crate_type {
-
                 CrateType::Lib => {
                     main_file_name = "lib.rs";
                 },
@@ -209,10 +210,25 @@ pub mod redoxr {
                 },
                 _ => {panic!("This Type isnt supported yet")}
             }
+
+            let output_path: String;
+            if self.is_output_crate {
+                output_path = "bin".to_owned() + PATH_SEPERATOR + &self.name;
+            } else {
+                output_path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.name;
+            }
+
+            let mut dependency_flags: Vec<String> = Vec::new();
+            for dependency in &self.deps {
+                if !dependency.is_compiled() {return Some(RedoxError::Error)}
+                dependency_flags.push(dependency.get_outpath())
+            }
+
             let mut compile_command = Command::new("rustc");
             let _ = compile_command
                 .args(&self.flags[..])
-                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + main_file_name);
+                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + main_file_name)
+                .args(&["-o", &output_path]);
 
             let mut child = match compile_command.spawn() {
                 Ok(value) => {value},
@@ -225,14 +241,19 @@ pub mod redoxr {
             }
         }
 
+        pub fn is_compiled(&self) -> bool {
+            self.compiled
+        }
+
+        pub fn make_output(&mut self) -> &mut Self {
+            self.is_output_crate = true;
+            self
+        }
+
         pub fn make_bin(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
                 CrateType::Lib => {CrateType::Bin},
                 CrateType::Bin => {CrateType::Bin},
-                CrateType::CargoLib => {CrateType::CargoBin},
-                CrateType::CargoBin => {CrateType::CargoBin},
-                CrateType::RedoxManagedBin => {CrateType::RedoxManagedBin},
-                CrateType::RedoxManagedLib => {CrateType::RedoxManagedBin},
                 CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")}
             };
             self
@@ -242,37 +263,82 @@ pub mod redoxr {
             self.crate_type = match &self.crate_type {
                 CrateType::Lib => {CrateType::Lib},
                 CrateType::Bin => {CrateType::Lib},
-                CrateType::CargoLib => {CrateType::CargoLib},
-                CrateType::CargoBin => {CrateType::CargoLib},
-                CrateType::RedoxManagedBin => {CrateType::RedoxManagedLib},
-                CrateType::RedoxManagedLib => {CrateType::RedoxManagedLib},
                 CrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")}
             };
             self
         }
+
+        pub fn set_root(&mut self, new_root: &str) -> &mut Self {
+            self.root = new_root.to_owned();
+            self
+        }
+
+        pub fn is_output_file(&self) -> bool {
+            self.is_output_crate
+        }
+
+        pub fn get_outpath (&self) -> String {
+            let output_path: String;
+            if self.is_output_file() {
+                output_path = "bin".to_owned() + PATH_SEPERATOR + &self.name;
+            } else {
+                output_path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.name;
+            }
+            output_path
+        }
+
+        pub fn get_name (&self) -> String {
+            self.name.clone()
+        }
+
+        pub fn run(&self) -> Option<RedoxError> {
+            let _ = match self.crate_type {CrateType::Lib => {return Some(RedoxError::Error)}, _ => {()}};
+
+            let path;
+            if self.is_output_crate {
+                path = "bin".to_owned() + PATH_SEPERATOR + &self.name;
+            } else {
+                path = "bin".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.name;
+            }
+
+            let command_name = ".".to_owned() + PATH_SEPERATOR + &path;
+            let mut run_command = Command::new(command_name);
+            let mut child = match run_command.spawn() {
+                Ok(value) => {value},
+                Err(_) => {return Some(RedoxError::Error)}
+            };
+
+            match child.wait() {
+                Ok(_) => {None},
+                Err(_) => {Some(RedoxError::Error)}
+            }
+        }
     }
 
-    pub struct Redoxr {
-        crates: Vec<RustCrate>,
+    pub struct Redoxr<'a> {
+        crates: Vec<RustCrate<'a>>,
         common_flags: Vec<String>,
-        main: RustCrate,
         crate_type: CrateType,
         build_status: Option<RedoxError>,
+
         cli_args: EmptyField,
     }
     
-    impl Redoxr {
+    impl<'a> Redoxr<'a> {
         pub fn new() -> Self {
+            #[allow(unused_mut)]
             let mut build_script = Self {
                 crates: Vec::new(),
                 common_flags: Vec::new(),
-                main: RustCrate::empty(),
                 crate_type: CrateType::Bin,
                 build_status: None,
                 cli_args: EmptyField,
             };
             if let Some(error) = Redoxr::setup_env() {error.panic()}
+
+            #[cfg(not(no_rebuild))]
             if let Some(status) = build_script.self_compile() {build_script.build_status = Some(status);}
+
             build_script
         }
 
@@ -336,11 +402,7 @@ pub mod redoxr {
             }
         }
 
-        fn set_main (&mut self, main: RustCrate) -> &mut RustCrate {
-            self.main = main;
-            &mut self.main
-        }
-        fn add_crate (&mut self, lib: RustCrate) -> &mut RustCrate {
+        fn add_crate (&'a mut self, lib: RustCrate<'a>) -> &'a mut RustCrate<'a> {
             let index = self.crates.len();
             self.crates.push(lib);
             &mut self.crates[index]
