@@ -119,15 +119,6 @@ pub mod redoxr {
         }
     }
 
-    #[derive(Debug, Clone)]
-    enum CrateBuilder {
-        SingleFile,
-        Cargo,
-        RedOxR,
-        PreBuilt,
-        NoneAtAll,
-    }
-
     #[derive(Debug)]
     pub enum RedoxError {
         Error,
@@ -155,6 +146,7 @@ pub mod redoxr {
         Redoxr,
         ExternalRedoxr,
         Cargo,
+        Prebuilt,
     }
 
     pub trait RedoxrCompatible {
@@ -352,6 +344,13 @@ pub mod redoxr {
             }
         }
 
+        pub fn is_cargo(&self) -> bool {
+            match self.crate_manager {
+                CrateManager::Cargo => {true},
+                _ => {false}
+            }
+        }
+
         pub fn make_output(&mut self) -> &mut Self {
             self.is_output_crate = true;
             self
@@ -428,19 +427,22 @@ pub mod redoxr {
         }
 
         pub fn run(&self) -> Option<RedoxError> {
-            if !self.is_compiled() {return Some(RedoxError::NotCompiled)}
-            if !self.is_bin() {return Some(RedoxError::NotExecutable)}
-
-            let command_name = ".".to_owned() + PATH_SEPERATOR + &self.get_outpath();
-            let mut run_command = Command::new(command_name);
-            let mut child = match run_command.spawn() {
-                Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)}
-            };
-
-            match child.wait() {
-                Ok(_) => {None},
-                Err(_) => {Some(RedoxError::Error)}
+            #[cfg(run)]
+            {
+                if !self.is_compiled() {return Some(RedoxError::NotCompiled)}
+                if !self.is_bin() {return Some(RedoxError::NotExecutable)}
+    
+                let command_name = ".".to_owned() + PATH_SEPERATOR + &self.get_outpath();
+                let mut run_command = Command::new(command_name);
+                let mut child = match run_command.spawn() {
+                    Ok(value) => {value},
+                    Err(_) => {return Some(RedoxError::Error)}
+                };
+    
+                match child.wait() {
+                    Ok(_) => {return None},
+                    Err(_) => {return Some(RedoxError::Error)}
+                }
             }
         }
     }
@@ -459,12 +461,39 @@ pub mod redoxr {
     }
     
     impl<'a> Redoxr<'a> {
-        pub fn new() -> Self {
+        pub fn new(flags: &[&'a str]) -> Self {
             #[allow(unused_mut)]
             let mut build_script = Self {
                 flags: Vec::new(),
                 cli_args: EmptyField,
             };
+
+            for flag in flags {
+                build_script.flags.push(flag);
+            }
+
+            #[cfg(not(manual))]
+            #[cfg(debug)]
+            {
+                let _ = build_script.flags.push("--cfg");
+                let _ = build_script.flags.push("debug");
+            }
+
+            #[cfg(not(manual))]
+            #[cfg(run)]
+            {
+                let _ = build_script.flags.push("--cfg");
+                let _ = build_script.flags.push("debug");
+            }
+
+            #[cfg(not(manual))]
+            #[cfg(boot_strap)]
+            {
+                let _ = build_script.flags.push("--cfg");
+                let _ = build_script.flags.push("boot_strap");
+                handle!(build_script self_compile);
+            }
+
             build_script
         }
 
