@@ -9,7 +9,9 @@ use redoxr::redoxr::*;
 fn main () {
 
     //automatically self_compiles
-    let mut redoxr = Redoxr::new(&[]);
+    let mut redoxr = Redoxr::new(&[
+        "--cfg", "manual",
+    ]);
     handle!(redoxr, self_compile);
     handle!(redoxr, setup_env);
 
@@ -20,16 +22,8 @@ fn main () {
         .set_output_file("libredoxr.rlib")
         .stay();
 
+    if let Some(_) = redoxr_lib.copy_raw("examples/1_single_crate") {}
+    if let Some(_) = redoxr_lib.copy_raw("examples/2_with_crate_dependencies") {}
     compile!(redoxr_lib);
-    let mut main_crate = RustCrate::new("test", ".")
-        .flags(&["--edition", "2024"])
-        .set_root(".")
-        .make_bin() 
-        .make_output()
-        .depend_on(&mut redoxr_lib)
-        .stay();
-
-    compile!(main_crate);
-    run!(main_crate)
 }
 
