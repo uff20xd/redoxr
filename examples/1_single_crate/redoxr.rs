@@ -376,7 +376,7 @@ pub mod redoxr {
             self
         }
 
-        pub fn depend_on(&mut self, dep: &'a mut RustCrate<'a>) -> &mut Self {
+        pub fn depend_on(&mut self, dep: *mut RustCrate<'a>) -> &mut Self {
             self.deps.push(Mirror(dep));
             self
         }
