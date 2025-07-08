@@ -9,7 +9,7 @@ use redoxr::redoxr::*;
 fn main () {
 
     //automatically self_compiles
-    let redoxr = Redoxr::new(&[]);
+    let mut redoxr = Redoxr::new(&[]);
     handle!(redoxr, self_compile);
     handle!(redoxr, setup_env);
 
