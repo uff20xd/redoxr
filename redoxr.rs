@@ -444,6 +444,7 @@ pub mod redoxr {
                     Err(_) => {return Some(RedoxError::Error)}
                 }
             }
+            None
         }
     }
 
@@ -458,6 +459,7 @@ pub mod redoxr {
     pub struct Redoxr<'a> {
         flags: Vec<&'a str>,
         cli_args: EmptyField,
+        compiled: bool,
     }
     
     impl<'a> Redoxr<'a> {
@@ -466,6 +468,7 @@ pub mod redoxr {
             let mut build_script = Self {
                 flags: Vec::new(),
                 cli_args: EmptyField,
+                compiled: false,
             };
 
             for flag in flags {
@@ -523,7 +526,9 @@ pub mod redoxr {
             self
         }
 
-        pub fn self_compile(&self) -> Option<RedoxError> {
+        pub fn self_compile(&mut self) -> Option<RedoxError> {
+            if self.compiled { return None }
+            else { self.compiled = true; }
             let mut compile_command = Command::new("rustc");
             let _ = compile_command.arg("build.rs")
                 .args(COMP_VERSION)
