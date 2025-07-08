@@ -487,6 +487,7 @@ pub mod redoxr {
 
     pub struct Redoxr<'a> {
         flags: Vec<&'a str>,
+        crates: Vec<Mirror<RustCrate<'a>>>,
         cli_args: EmptyField,
         compiled: bool,
     }
@@ -497,6 +498,7 @@ pub mod redoxr {
             let mut build_script = Self {
                 flags: Vec::new(),
                 cli_args: EmptyField,
+                crates: Vec::new(),
                 compiled: false,
             };
 
@@ -542,6 +544,21 @@ pub mod redoxr {
                 Ok(_) => {None},
                 Err(_) => {Some(RedoxError::Error)},
             }
+        }
+
+        pub fn add_crates(&mut self, crates: &[*mut RustCrate<'a>]) -> &mut Self {
+            for rcrate in crates {
+                self.crates.push(Mirror::new(rcrate.clone()));
+            }
+            self
+        }
+
+        pub fn auto_compile(&mut self)  -> &mut Self {
+            todo!()
+        }
+
+        pub fn generate_json(&self) -> Option<RedoxError> {
+            todo!();
         }
 
         pub fn debug(mut self) -> Self {
