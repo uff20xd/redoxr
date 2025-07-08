@@ -4,10 +4,7 @@ use redoxr::redoxr::*;
 fn main() -> () {
     let _redoxr = Redoxr::new(&[
         "--cfg", "run",
-        "--cfg", "debug"
     ]);
-
-
 
     let mut fibonacci = RustCrate::new("fibonacci", "fibonacci")
         .flags(&["-Copt-level=3"])
