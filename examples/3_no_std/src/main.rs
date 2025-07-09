@@ -7,12 +7,20 @@ use core::{
     },
     result::Result,
     panic::PanicInfo,
+    ffi::c_char,
+    ffi::c_void,
+    ffi::c_int,
 };
 
-macro_rules! print {
-    ($($arg:tt)*) => {{
-        $crate::io::_print($crate::format_args!($($arg)*));
-    }};
+//macro_rules! print {
+//    ($string:tt, $($arg:tt)*) => {{
+//        unsafe { printf(b$string, ($($arg)*)) };
+//    }};
+//}
+
+//#[link(name = "c")]
+unsafe extern "C" {
+    //fn printf(fmt: *const c_char, ...) -> c_int;
 }
 
 #[panic_handler]
@@ -20,7 +28,8 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn _start() -> Result<(), ()> {
+    //unsafe { printf(b"hehheeh".as_ptr() as *const c_char) };
     Ok(())
 }

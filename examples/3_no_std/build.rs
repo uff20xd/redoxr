@@ -9,7 +9,7 @@ fn main() -> MainResult {
 
     let mut main_crate = RustCrate::new("nostd", ".")
         .flags(&[
-            "--edition", "2015",
+            "--edition", "2024",
             //"-Copt-level=z", 
             "-Cpanic=abort",
             "-Clink-arg=-nostartfiles",
@@ -20,6 +20,7 @@ fn main() -> MainResult {
         //.set_output_file("nostd.o")
         .stay();
 
+    let _ = Cmd::new("gcc").args(&["src/test.c", "-o", "out/test"]).spawn()?.wait()?;
     compile!(main_crate);
     run!(main_crate);
     Ok(())

@@ -100,6 +100,7 @@ pub mod redoxr {
     };
 
     type IOError = std::io::Error;
+    pub type Cmd = Command;
     pub type AnyError = Box<dyn std::error::Error>;
     pub type MainResult = Result<(), AnyError>;
  
