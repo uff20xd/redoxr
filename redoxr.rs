@@ -199,12 +199,12 @@ pub mod redoxr {
         flags: Vec<&'a str>,
         compiled: bool,
 
-        refrence_counter: u64,
+        //refrence_counter: u64,
 
 
         //currently unused
-        id: u64,
-        external: Option<String>,
+        //id: u64,
+        //external: Option<String>,
     }
 
     /// Struct that defines a crate for as the main file or a dependency
@@ -224,11 +224,6 @@ pub mod redoxr {
                 compiled: false,
 
                 flags: Vec::new(),
-
-                id: 0,
-                refrence_counter: 0,
-
-                external: None,
             };
             call
         }
@@ -249,10 +244,10 @@ pub mod redoxr {
 
                 flags: Vec::new(),
 
-                id: 0,
-                refrence_counter: 0,
+                //id: 0,
+                //refrence_counter: 0,
 
-                external: None,
+                //external: None,
             };
             call
         }
@@ -261,12 +256,79 @@ pub mod redoxr {
             self.to_owned()
         }
 
-        pub fn from_cargo(_name: &str) -> Self {
-            todo!()
+        pub fn from_cargo(name: &str, root: &str) -> Self {
+            let call = Self {
+                name: name.to_owned(),
+                root: root.to_owned(),
+                src_dir: "src".to_owned(),
+                main_file: "main.rs".to_owned(),
+                output_file: name.to_owned(),
+                is_output_crate: false,
+
+                deps: Vec::new(),
+                crate_type: CrateType::Lib,
+                crate_manager: CrateManager::Cargo,
+                compiled: false,
+
+                flags: Vec::new(),
+            };
+            call
+        }
+
+        pub fn compile_cargo(&mut self) -> Option<RedoxError> {
+            let output_path: String;
+            if self.is_output_crate {
+                output_path = "out".to_owned() + PATH_SEPERATOR + &self.output_file;
+            } else {
+                output_path = "out".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.output_file;
+            }
+            
+            let crate_type;
+            if self.is_bin() {
+                crate_type = "bin".to_owned();
+            } else {
+                crate_type = "lib".to_owned();
+            }
+
+            let mut dependency_flags: Vec<(String, String)> = Vec::new();
+            for dependency in &self.deps {
+                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error)}
+                let dep = dependency.borrow();
+                dependency_flags.push(( dep.name.clone(), dep.get_outpath()));
+
+                #[cfg(debug)]
+                dbg!(&dependency);
+            }
+
+            let mut compile_command = Command::new("cargo");
+            let _ = compile_command
+                .arg("")
+                .arg("build")
+                .args("--release")
+                .args(&self.flags[..])
+                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
+                .args(&["--crate-type", &crate_type]);
+
+            #[cfg(debug)]
+            dbg!(&compile_command);
+
+            let mut child = match compile_command.spawn() {
+                Ok(value) => {value},
+                Err(_) => {return Some(RedoxError::Error)}
+            };
+
+            match child.wait() {
+                Ok(_) => {
+                    self.compiled = true;
+                    None
+                },
+                Err(_) => {Some(RedoxError::Error)},
+            }
         }
 
         pub fn compile(&mut self) -> Option<RedoxError> {
             if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
+            if self.is_cargo() {return self.compile_cargo()}
 
             let output_path: String;
             if self.is_output_crate {
@@ -328,6 +390,13 @@ pub mod redoxr {
 
         pub fn is_compiled(&self) -> bool {
             self.compiled
+        }
+
+        pub fn is_cargo(&self) -> bool {
+            match self.crate_manager {
+                CrateManager::Cargo => {true},
+                _ => {false}
+            }
         }
 
         pub fn is_bin(&self) -> bool {
