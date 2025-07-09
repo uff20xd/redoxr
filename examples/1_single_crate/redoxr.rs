@@ -59,7 +59,6 @@
 //Currently that is most of the magic, but soon I will implement the version that uses traits,
 //making it expandable to other languages easily as long as I write it correctly.
 //====================================================================
-
 #![allow(dead_code)]
 
 pub mod redoxr {
@@ -95,7 +94,12 @@ pub mod redoxr {
         process::{
             Command, //Child,
         }, 
+        error::Error,
+        fmt::Display,
+        fmt::Formatter,
     };
+
+    type IOError = std::io::Error;
  
     #[derive(Clone, Debug)]
     pub struct Mirror<T> (*mut T);
@@ -122,15 +126,37 @@ pub mod redoxr {
     #[derive(Debug)]
     pub enum RedoxError {
         Error,
-        WrongCrateType,
+        WrongCrateType(String, String),
         NotExecutable,
         NotCompiled,
         AlreadyCompiled(String),
+        IOProcessFailed(IOError),
     }
     impl RedoxError {
         pub fn panic (&self) -> () {
             dbg!(self);
             panic!("");
+        }
+    }
+
+    impl Display for RedoxError {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+            let output = match self {
+                RedoxError::Error => {"Currently Undefined Error!"},
+                RedoxError::WrongCrateType(error, error2) => {&format!("The Crate is of the wrong type: {}! Should be {}", error, error2)},
+                RedoxError::NotExecutable => {"The File is not executable!"},
+                RedoxError::NotCompiled => {"The File is not Compiled!"},
+                RedoxError::AlreadyCompiled(file) => {&format!("File {} is already compiled!", file)},
+                RedoxError::IOProcessFailed(error) => {&format!("{}", error)},
+            };
+            write!(f, "{}", output)
+        }
+    }
+    impl Error for RedoxError {}
+
+    impl From<IOError> for RedoxError {
+        fn from(io_error: std::io::Error) -> Self {
+            RedoxError::IOProcessFailed(io_error)
         }
     }
 
@@ -151,17 +177,16 @@ pub mod redoxr {
 
     pub trait RedoxrCompatible {
         fn compile(&self) -> Option<RedoxError>;
-        fn dependency<T>(&mut self, dep: T) -> &mut Self
-            where T: RedoxrCompatible;
+        fn depend_on(&mut self, dep: *mut Box<dyn RedoxrCompatible>) -> &mut Box<dyn RedoxrCompatible>;
         //fn get_outputs(&self) -> String;
-        fn flags(&mut self) -> &mut Self;
+        fn flags(&mut self) -> &mut Box<dyn RedoxrCompatible>;
         fn is_output_file(&self) -> bool;
         fn is_compiled(&self) -> bool;
         fn is_bin(&self) -> bool;
         fn is_lib(&self) -> bool;
         fn get_outpath(&self) -> String;
         fn get_name(&self) -> String;
-        fn stay(&mut self) -> Self;
+        fn stay(&mut self) -> Box<dyn RedoxrCompatible>;
     }
     // Implement Concept for better builds
     
@@ -199,15 +224,15 @@ pub mod redoxr {
         flags: Vec<&'a str>,
         compiled: bool,
 
-        refrence_counter: u64,
+        //refrence_counter: u64,
 
 
         //currently unused
-        id: u64,
-        external: Option<String>,
+        //id: u64,
+        //external: Option<String>,
     }
 
-    /// Struct that defines a crate for as the main file or a dependency
+    ///Represents a Rust Crate with refrences to all dependencies.
     impl<'a> RustCrate<'a> {
         pub fn empty() -> Self {
             let call = Self {
@@ -224,11 +249,6 @@ pub mod redoxr {
                 compiled: false,
 
                 flags: Vec::new(),
-
-                id: 0,
-                refrence_counter: 0,
-
-                external: None,
             };
             call
         }
@@ -249,10 +269,10 @@ pub mod redoxr {
 
                 flags: Vec::new(),
 
-                id: 0,
-                refrence_counter: 0,
+                //id: 0,
+                //refrence_counter: 0,
 
-                external: None,
+                //external: None,
             };
             call
         }
@@ -261,12 +281,53 @@ pub mod redoxr {
             self.to_owned()
         }
 
-        pub fn from_cargo(_name: &str) -> Self {
-            todo!()
+        pub fn from_cargo(name: &str, root: &str) -> Self {
+            let call = Self {
+                name: name.to_owned(),
+                root: root.to_owned(),
+                src_dir: "src".to_owned(),
+                main_file: "main.rs".to_owned(),
+                output_file: name.to_owned(),
+                is_output_crate: false,
+
+                deps: Vec::new(),
+                crate_type: CrateType::Lib,
+                crate_manager: CrateManager::Cargo,
+                compiled: false,
+
+                flags: Vec::new(),
+            };
+            call
+        }
+
+        ///Compiles Cargo Crates and moves their output into out/deps/
+        pub fn compile_cargo(&mut self) -> Result<(), RedoxError> {
+            let crate_type;
+            if self.is_bin() {
+                crate_type = "bin".to_owned();
+            } else {
+                crate_type = "lib".to_owned();
+            }
+
+            let mut compile_command = Command::new("cargo");
+            let _ = compile_command
+                .current_dir(&self.root)
+                .arg("build")
+                .arg("--release")
+                .args(&self.flags[..])
+                .args(&["--crate-type", &crate_type]);
+
+            #[cfg(debug)]
+            dbg!(&compile_command);
+
+            let mut child = compile_command.spawn()?;
+            let _ = child.wait()?;
+            Ok(())
         }
 
         pub fn compile(&mut self) -> Option<RedoxError> {
             if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
+            //if self.is_cargo() {return self.compile_cargo()}
 
             let output_path: String;
             if self.is_output_crate {
@@ -330,6 +391,13 @@ pub mod redoxr {
             self.compiled
         }
 
+        pub fn is_cargo(&self) -> bool {
+            match self.crate_manager {
+                CrateManager::Cargo => {true},
+                _ => {false}
+            }
+        }
+
         pub fn is_bin(&self) -> bool {
             match self.crate_type {
                 CrateType::Bin => {true},
@@ -344,12 +412,6 @@ pub mod redoxr {
             }
         }
 
-        pub fn is_cargo(&self) -> bool {
-            match self.crate_manager {
-                CrateManager::Cargo => {true},
-                _ => {false}
-            }
-        }
 
         pub fn make_output(&mut self) -> &mut Self {
             self.is_output_crate = true;

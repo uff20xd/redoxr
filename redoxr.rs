@@ -59,7 +59,6 @@
 //Currently that is most of the magic, but soon I will implement the version that uses traits,
 //making it expandable to other languages easily as long as I write it correctly.
 //====================================================================
-
 #![allow(dead_code)]
 
 pub mod redoxr {
@@ -95,7 +94,12 @@ pub mod redoxr {
         process::{
             Command, //Child,
         }, 
+        error::Error,
+        fmt::Display,
+        fmt::Formatter,
     };
+
+    type IOError = std::io::Error;
  
     #[derive(Clone, Debug)]
     pub struct Mirror<T> (*mut T);
@@ -122,15 +126,37 @@ pub mod redoxr {
     #[derive(Debug)]
     pub enum RedoxError {
         Error,
-        WrongCrateType,
+        WrongCrateType(String, String),
         NotExecutable,
         NotCompiled,
         AlreadyCompiled(String),
+        IOProcessFailed(IOError),
     }
     impl RedoxError {
         pub fn panic (&self) -> () {
             dbg!(self);
             panic!("");
+        }
+    }
+
+    impl Display for RedoxError {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+            let output = match self {
+                RedoxError::Error => {"Currently Undefined Error!"},
+                RedoxError::WrongCrateType(error, error2) => {&format!("The Crate is of the wrong type: {}! Should be {}", error, error2)},
+                RedoxError::NotExecutable => {"The File is not executable!"},
+                RedoxError::NotCompiled => {"The File is not Compiled!"},
+                RedoxError::AlreadyCompiled(file) => {&format!("File {} is already compiled!", file)},
+                RedoxError::IOProcessFailed(error) => {&format!("{}", error)},
+            };
+            write!(f, "{}", output)
+        }
+    }
+    impl Error for RedoxError {}
+
+    impl From<IOError> for RedoxError {
+        fn from(io_error: std::io::Error) -> Self {
+            RedoxError::IOProcessFailed(io_error)
         }
     }
 
@@ -151,17 +177,16 @@ pub mod redoxr {
 
     pub trait RedoxrCompatible {
         fn compile(&self) -> Option<RedoxError>;
-        fn dependency<T>(&mut self, dep: T) -> &mut Self
-            where T: RedoxrCompatible;
+        fn depend_on(&mut self, dep: *mut Box<dyn RedoxrCompatible>) -> &mut Box<dyn RedoxrCompatible>;
         //fn get_outputs(&self) -> String;
-        fn flags(&mut self) -> &mut Self;
+        fn flags(&mut self) -> &mut Box<dyn RedoxrCompatible>;
         fn is_output_file(&self) -> bool;
         fn is_compiled(&self) -> bool;
         fn is_bin(&self) -> bool;
         fn is_lib(&self) -> bool;
         fn get_outpath(&self) -> String;
         fn get_name(&self) -> String;
-        fn stay(&mut self) -> Self;
+        fn stay(&mut self) -> Box<dyn RedoxrCompatible>;
     }
     // Implement Concept for better builds
     
@@ -207,7 +232,7 @@ pub mod redoxr {
         //external: Option<String>,
     }
 
-    /// Struct that defines a crate for as the main file or a dependency
+    ///Represents a Rust Crate with refrences to all dependencies.
     impl<'a> RustCrate<'a> {
         pub fn empty() -> Self {
             let call = Self {
@@ -275,14 +300,8 @@ pub mod redoxr {
             call
         }
 
-        pub fn compile_cargo(&mut self) -> Option<RedoxError> {
-            let output_path: String;
-            if self.is_output_crate {
-                output_path = "out".to_owned() + PATH_SEPERATOR + &self.output_file;
-            } else {
-                output_path = "out".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.output_file;
-            }
-            
+        ///Compiles Cargo Crates and moves their output into out/deps/
+        pub fn compile_cargo(&mut self) -> Result<(), RedoxError> {
             let crate_type;
             if self.is_bin() {
                 crate_type = "bin".to_owned();
@@ -290,45 +309,25 @@ pub mod redoxr {
                 crate_type = "lib".to_owned();
             }
 
-            let mut dependency_flags: Vec<(String, String)> = Vec::new();
-            for dependency in &self.deps {
-                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error)}
-                let dep = dependency.borrow();
-                dependency_flags.push(( dep.name.clone(), dep.get_outpath()));
-
-                #[cfg(debug)]
-                dbg!(&dependency);
-            }
-
             let mut compile_command = Command::new("cargo");
             let _ = compile_command
-                .arg("")
+                .current_dir(&self.root)
                 .arg("build")
-                .args("--release")
+                .arg("--release")
                 .args(&self.flags[..])
-                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
                 .args(&["--crate-type", &crate_type]);
 
             #[cfg(debug)]
             dbg!(&compile_command);
 
-            let mut child = match compile_command.spawn() {
-                Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)}
-            };
-
-            match child.wait() {
-                Ok(_) => {
-                    self.compiled = true;
-                    None
-                },
-                Err(_) => {Some(RedoxError::Error)},
-            }
+            let mut child = compile_command.spawn()?;
+            let _ = child.wait()?;
+            Ok(())
         }
 
         pub fn compile(&mut self) -> Option<RedoxError> {
             if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
-            if self.is_cargo() {return self.compile_cargo()}
+            //if self.is_cargo() {return self.compile_cargo()}
 
             let output_path: String;
             if self.is_output_crate {
@@ -413,12 +412,6 @@ pub mod redoxr {
             }
         }
 
-        pub fn is_cargo(&self) -> bool {
-            match self.crate_manager {
-                CrateManager::Cargo => {true},
-                _ => {false}
-            }
-        }
 
         pub fn make_output(&mut self) -> &mut Self {
             self.is_output_crate = true;
