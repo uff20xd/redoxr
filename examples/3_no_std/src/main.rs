@@ -29,7 +29,6 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[unsafe(no_mangle)]
-fn _start() -> Result<(), ()> {
+fn _start() {
     //unsafe { printf(b"hehheeh".as_ptr() as *const c_char) };
-    Ok(())
 }

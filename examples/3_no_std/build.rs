@@ -10,8 +10,9 @@ fn main() -> MainResult {
     let mut main_crate = RustCrate::new("nostd", ".")
         .flags(&[
             "--edition", "2024",
-            //"-Copt-level=z", 
+            //"-Copt-level=z",
             "-Cpanic=abort",
+            "-l", "c",
             "-Clink-arg=-nostartfiles",
             //"--emit=obj"
         ])
