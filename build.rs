@@ -24,6 +24,7 @@ fn main () {
 
     if let Some(_) = redoxr_lib.copy_raw("examples/1_single_crate") {}
     if let Some(_) = redoxr_lib.copy_raw("examples/2_with_crate_dependencies") {}
+    if let Some(_) = redoxr_lib.copy_raw("examples/3_no_std") {}
     compile!(redoxr_lib);
 }
 

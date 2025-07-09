@@ -32,7 +32,6 @@ fn main() -> () {
     let human = Human {legs: 2};
     let cat = Cat {legs: 4};
 
-
     let test: *const () = &();
     let list_of_animal: [*const dyn Animal; 2] = [&cat, &human];
 

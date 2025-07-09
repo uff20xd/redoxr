@@ -26,7 +26,7 @@
 //    handle!(redoxr setup_env);
 //
 //    let mut main_crate = RustCrate::main( "some_crate");
-//    if let Some(error) = main_crate.compile() {error.panic()};
+//    if let Some(error) = main_crate.compile() {panic!("{}",error)};
 //}
 //################
 //
@@ -41,7 +41,7 @@
 //    let mut redoxr = Redoxr::new();
 //    let mut dependency = RustCrate::from_cargo("clap", "clap");
 //
-//    if let Some(error) = dependency.compile() {error.panic()}
+//    if let Some(error) = dependency.compile() {panic!("{}",error)}
 //
 //    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate").
 //        .depend_on(dependecy.clone());
@@ -100,6 +100,8 @@ pub mod redoxr {
     };
 
     type IOError = std::io::Error;
+    pub type AnyError = Box<dyn std::error::Error>;
+    pub type MainResult = Result<(), AnyError>;
  
     #[derive(Clone, Debug)]
     pub struct Mirror<T> (*mut T);
@@ -125,24 +127,18 @@ pub mod redoxr {
 
     #[derive(Debug)]
     pub enum RedoxError {
-        Error,
+        Error(u32),
         WrongCrateType(String, String),
         NotExecutable,
         NotCompiled,
         AlreadyCompiled(String),
         IOProcessFailed(IOError),
     }
-    impl RedoxError {
-        pub fn panic (&self) -> () {
-            dbg!(self);
-            panic!("");
-        }
-    }
 
     impl Display for RedoxError {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
             let output = match self {
-                RedoxError::Error => {"Currently Undefined Error!"},
+                RedoxError::Error(line) => {&format!("Currently Undefined Error! line: {}:{}", file!(), line)},
                 RedoxError::WrongCrateType(error, error2) => {&format!("The Crate is of the wrong type: {}! Should be {}", error, error2)},
                 RedoxError::NotExecutable => {"The File is not executable!"},
                 RedoxError::NotCompiled => {"The File is not Compiled!"},
@@ -195,7 +191,7 @@ pub mod redoxr {
     #[macro_export]
     macro_rules! compile {
         ($comp_file:ident) => {
-            if let Some(error) = ($comp_file).compile() {error.panic()}
+            if let Some(error) = ($comp_file).compile() {panic!("{}",error)}
         }
     }
 
@@ -203,7 +199,7 @@ pub mod redoxr {
     #[macro_export]
     macro_rules! run {
         ($comp_file:ident) => {
-            if let Some(error) = ($comp_file).run() {error.panic()}
+            if let Some(error) = ($comp_file).run() {panic!("{}",error)}
         }
     }
 
@@ -345,7 +341,7 @@ pub mod redoxr {
 
             let mut dependency_flags: Vec<(String, String)> = Vec::new();
             for dependency in &self.deps {
-                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error)}
+                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error(line!()))}
                 let dep = dependency.borrow();
                 dependency_flags.push(( dep.name.clone(), dep.get_outpath()));
 
@@ -375,7 +371,7 @@ pub mod redoxr {
 
             let mut child = match compile_command.spawn() {
                 Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)}
+                Err(_) => {return Some(RedoxError::Error(line!()))}
             };
 
             match child.wait() {
@@ -383,7 +379,7 @@ pub mod redoxr {
                     self.compiled = true;
                     None
                 },
-                Err(_) => {Some(RedoxError::Error)},
+                Err(_) => {Some(RedoxError::Error(line!()))},
             }
         }
 
@@ -504,12 +500,12 @@ pub mod redoxr {
 
             let mut child = match copy_command.spawn() {
                 Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)}
+                Err(_) => {return Some(RedoxError::Error(line!()))}
             };
 
             match child.wait() {
                 Ok(_) => {return None},
-                Err(_) => {return Some(RedoxError::Error)}
+                Err(_) => {return Some(RedoxError::Error(line!()))}
             }
         }
 
@@ -529,12 +525,12 @@ pub mod redoxr {
             let mut run_command = Command::new(command_name);
             let mut child = match run_command.spawn() {
                 Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)}
+                Err(_) => {return Some(RedoxError::Error(line!()))}
             };
 
             match child.wait() {
                 Ok(_) => {return None},
-                Err(_) => {return Some(RedoxError::Error)}
+                Err(_) => {return Some(RedoxError::Error(line!()))}
             }
         }
     }
@@ -543,7 +539,7 @@ pub mod redoxr {
     #[macro_export]
     macro_rules! handle {
         ($comp_file:ident, $method:ident) => {
-            if let Some(error) = ($comp_file).$method() {error.panic()}
+            if let Some(error) = ($comp_file).$method() {panic!("{}",error)}
         }
     }
 
@@ -600,11 +596,11 @@ pub mod redoxr {
             let _ = command.args(&["-p", &("out".to_owned() + PATH_SEPERATOR + "deps")]);
             let mut child = match command.spawn() {
                 Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error)},
+                Err(_) => {return Some(RedoxError::Error(line!()))},
             };
             match child.wait() {
                 Ok(_) => {None},
-                Err(_) => {Some(RedoxError::Error)},
+                Err(_) => {Some(RedoxError::Error(line!()))},
             }
         }
 
@@ -660,7 +656,7 @@ pub mod redoxr {
                     value
                 },
                 Err(_value) => {
-                    return Some(RedoxError::Error);
+                    return Some(RedoxError::Error(line!()));
                 }
             };
             match child.wait() {
@@ -668,7 +664,7 @@ pub mod redoxr {
                     None
                 },
                 Err(_value ) => {
-                    Some(RedoxError::Error)
+                    Some(RedoxError::Error(line!()))
                 }
             }
         }
