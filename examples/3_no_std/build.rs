@@ -14,7 +14,7 @@ fn main() -> MainResult {
             "-Cpanic=abort",
             "-l", "c",
             "-Clink-arg=-nostartfiles",
-            //"-Ctarget-feature=+crt-static",
+            "-Ctarget-feature=+crt-static",
             //"--target=x86_64-unknown-linux-musl"
             //"--emit=obj"
         ])

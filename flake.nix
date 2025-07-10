@@ -21,6 +21,7 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = with pkgs; [
             clang
+            glibc
             llvmPackages.bintools
             rustup
           ];
