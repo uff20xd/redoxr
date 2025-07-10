@@ -22,9 +22,11 @@ fn main () {
         .set_output_file("libredoxr.rlib")
         .stay();
 
+
     if let Some(error) = redoxr_lib.copy_raw("examples/1_single_crate") {panic!("{}", error)}
     if let Some(error) = redoxr_lib.copy_raw("examples/2_with_crate_dependencies") {panic!("{}", error)}
     if let Some(error) = redoxr_lib.copy_raw("examples/3_no_std") {panic!("{}", error)}
     compile!(redoxr_lib);
+    let mut test = RustCrate::form_cargo("test", "test");
 }
 

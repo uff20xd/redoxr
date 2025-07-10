@@ -13,9 +13,9 @@ fn main() -> MainResult {
             //"-Copt-level=z",
             "-Cpanic=abort",
             "-l", "c",
-            "-Clink-arg=-nostartfiles",
-            "-Ctarget-feature=+crt-static",
-            //"--target=x86_64-unknown-linux-musl"
+            //"-Clink-arg=-nostartfiles",
+            //"-Ctarget-feature=+crt-static",
+            "--target=x86_64-unknown-none"
             //"--emit=obj"
         ])
         .make_bin()

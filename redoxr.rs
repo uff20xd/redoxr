@@ -94,9 +94,11 @@ pub mod redoxr {
         process::{
             Command, //Child,
         }, 
+        fs::self,
         error::Error,
         fmt::Display,
         fmt::Formatter,
+        path::Path,
     };
 
     type IOError = std::io::Error;
@@ -319,6 +321,20 @@ pub mod redoxr {
 
             let mut child = compile_command.spawn()?;
             let _ = child.wait()?;
+
+            let mut needed_files: Vec<String> = Vec::new();
+
+            let RELEASE_PATH: String = PATH_SEPERATOR.to_owned() + "target" + PATH_SEPERATOR + "release";
+
+            let release_path = self.root.clone() + &RELEASE_PATH;
+            let release_deps_path = self.root.clone() + &RELEASE_PATH + PATH_SEPERATOR + "deps";
+
+            let mut files_in_dir = fs::read_dir(Path::new(&release_path))?;
+
+            for file in files_in_dir {
+            }
+
+
             Ok(())
         }
 
