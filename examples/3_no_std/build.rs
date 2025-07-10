@@ -14,6 +14,7 @@ fn main() -> MainResult {
             "-Cpanic=abort",
             "-l", "c",
             "-Clink-arg=-nostartfiles",
+            "-Ctarget-feature=+crt-static",
             //"--emit=obj"
         ])
         .make_bin()
