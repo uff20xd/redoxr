@@ -139,12 +139,12 @@ pub mod redoxr {
     impl Display for RedoxError {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
             let output = match self {
-                RedoxError::Error(line) => {&format!("Currently Undefined Error! line: {}:{}", file!(), line)},
-                RedoxError::WrongCrateType(error, error2) => {&format!("The Crate is of the wrong type: {}! Should be {}", error, error2)},
-                RedoxError::NotExecutable => {"The File is not executable!"},
-                RedoxError::NotCompiled => {"The File is not Compiled!"},
-                RedoxError::AlreadyCompiled(file) => {&format!("File {} is already compiled!", file)},
-                RedoxError::IOProcessFailed(error) => {&format!("{}", error)},
+                RedoxError::Error(line) => {format!("Currently Undefined Error! line: {}:{}", file!(), line)},
+                RedoxError::WrongCrateType(error, error2) => {format!("The Crate is of the wrong type: {}! Should be {}", error, error2)},
+                RedoxError::NotExecutable => {format!("The File is not executable!")},
+                RedoxError::NotCompiled => {format!("The File is not Compiled!")},
+                RedoxError::AlreadyCompiled(file) => {format!("File {} is already compiled!", file)},
+                RedoxError::IOProcessFailed(error) => {format!("{}", error)},
             };
             write!(f, "{}", output)
         }
