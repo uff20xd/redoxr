@@ -215,6 +215,7 @@ pub mod redoxr {
         main_file: String,
         output_file: String,
         is_output_crate: bool,
+        show_output: bool,
 
         deps: Vec<Mirror<RustCrate<'a>>>,
         crate_type: CrateType,
@@ -241,6 +242,7 @@ pub mod redoxr {
                 main_file: "".to_owned(),
                 output_file: "".to_owned(),
                 is_output_crate: false,
+                show_output: false,
 
                 deps: Vec::new(),
                 crate_type: CrateType::Empty,
@@ -260,6 +262,7 @@ pub mod redoxr {
                 main_file: "main.rs".to_owned(),
                 output_file: name.to_owned(),
                 is_output_crate: false,
+                show_output: false,
 
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
@@ -288,6 +291,7 @@ pub mod redoxr {
                 main_file: "main.rs".to_owned(),
                 output_file: name.to_owned(),
                 is_output_crate: false,
+                show_output: false,
 
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
@@ -322,16 +326,17 @@ pub mod redoxr {
             let mut child = compile_command.spawn()?;
             let _ = child.wait()?;
 
-            let mut needed_files: Vec<String> = Vec::new();
+            let mut _needed_files: Vec<String> = Vec::new();
 
-            let RELEASE_PATH: String = PATH_SEPERATOR.to_owned() + "target" + PATH_SEPERATOR + "release";
+            let release_path_part: String = PATH_SEPERATOR.to_owned() + "target" + PATH_SEPERATOR + "release";
 
-            let release_path = self.root.clone() + &RELEASE_PATH;
-            let release_deps_path = self.root.clone() + &RELEASE_PATH + PATH_SEPERATOR + "deps";
+            let release_path = self.root.clone() + &release_path_part;
+            let release_deps_path = self.root.clone() + &release_path_part + PATH_SEPERATOR + "deps";
 
             let mut files_in_dir = fs::read_dir(Path::new(&release_path))?;
 
             for file in files_in_dir {
+                println!();
             }
 
 
@@ -339,15 +344,18 @@ pub mod redoxr {
         }
 
         pub fn compile(&mut self) -> Option<RedoxError> {
-            if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
-            //if self.is_cargo() {return self.compile_cargo()}
 
+            let input_path = self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file;
             let output_path: String;
             if self.is_output_crate {
                 output_path = "out".to_owned() + PATH_SEPERATOR + &self.output_file;
             } else {
                 output_path = "out".to_owned() + PATH_SEPERATOR + "deps" + PATH_SEPERATOR + &self.output_file;
             }
+
+            println!("\nCompiling {}: {} -> {}", self.name.clone(), self.root.clone(), &output_path);
+            if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
+            //if self.is_cargo() {return self.compile_cargo()}
             
             let crate_type;
             if self.is_bin() {
@@ -370,7 +378,7 @@ pub mod redoxr {
             let _ = compile_command
                 .args(COMP_VERSION)
                 .args(&self.flags[..])
-                .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
+                .arg(&input_path)
                 .args(&["-o", &output_path])
                 .args(&["-L", "bin/deps", "-L", "bin/"])
                 .args(&["--crate-type", &crate_type]);
@@ -386,17 +394,22 @@ pub mod redoxr {
             #[cfg(debug)]
             dbg!(&compile_command);
 
-            let mut child = match compile_command.spawn() {
-                Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error(line!()))}
-            };
+            if self.is_show_output() {
+                let mut child = match compile_command.spawn() {
+                    Ok(value) => {value},
+                    Err(_) => {return Some(RedoxError::Error(line!()))}
+                };
 
-            match child.wait() {
-                Ok(_) => {
-                    self.compiled = true;
-                    None
-                },
-                Err(_) => {Some(RedoxError::Error(line!()))},
+                match child.wait() {
+                    Ok(_) => {
+                        self.compiled = true;
+                        return None
+                    },
+                    Err(_) => {return Some(RedoxError::Error(line!()))},
+                }
+            } else {
+                if compile_command.output().is_err() { return Some(RedoxError::Error(line!()))}
+                return None
             }
         }
 
@@ -427,6 +440,7 @@ pub mod redoxr {
 
 
         pub fn make_output(&mut self) -> &mut Self {
+            self.show_output = true;
             self.is_output_crate = true;
             self
         }
@@ -476,8 +490,17 @@ pub mod redoxr {
             self
         }
 
+        pub fn set_show_output(&mut self, new_state: bool) -> &mut Self {
+            self.show_output = new_state;
+            self
+        }
+
         pub fn is_output_file(&self) -> bool {
             self.is_output_crate
+        }
+
+        pub fn is_show_output (&self) -> bool {
+            self.show_output
         }
 
         pub fn get_outpath (&self) -> String {
