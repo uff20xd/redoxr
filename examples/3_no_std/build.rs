@@ -15,7 +15,7 @@ fn main() -> MainResult {
             "-l", "c",
             //"-Clink-arg=-nostartfiles",
             //"-Ctarget-feature=+crt-static",
-            "--target=x86_64-unknown-none"
+            "--target=x86_64-unknown-none",
             //"--emit=obj"
         ])
         .make_bin()
