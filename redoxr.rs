@@ -336,7 +336,7 @@ pub mod redoxr {
             let mut files_in_dir = fs::read_dir(Path::new(&release_path))?;
 
             for file in files_in_dir {
-                println!();
+                println!("{:?}", file);
             }
 
 
