@@ -10,8 +10,12 @@ fn main() -> MainResult {
         .stay();
 
     let mut main_crate = RustCrate::new("with_cargo", ".")
+        .set_src(".")
         .make_bin()
         .make_output()
         .stay();
 
+    let _ = cargo_crate.compile_cargo()?;
+    compile!(main_crate);
+    Ok(())
 }

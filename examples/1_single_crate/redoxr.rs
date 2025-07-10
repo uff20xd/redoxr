@@ -317,8 +317,8 @@ pub mod redoxr {
                 .current_dir(&self.root)
                 .arg("build")
                 .arg("--release")
-                .args(&self.flags[..])
-                .args(&["--crate-type", &crate_type]);
+                .args(&self.flags[..]);
+                //.args(&["--crate-type", &crate_type]);
 
             #[cfg(debug)]
             dbg!(&compile_command);
