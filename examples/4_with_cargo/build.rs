@@ -1,0 +1,17 @@
+mod redoxr;
+use redoxr::redoxr::*;
+
+fn main() -> MainResult {
+    let redoxr = Redoxr::new(&[
+        "--cfg", "run",
+    ]);
+
+    let mut cargo_crate =RustCrate::from_cargo("fibonacci", "fibonacci")
+        .stay();
+
+    let mut main_crate = RustCrate::new("with_cargo", ".")
+        .make_bin()
+        .make_output()
+        .stay();
+
+}
