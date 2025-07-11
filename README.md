@@ -6,7 +6,7 @@ Also my code is a mess, so its performance is probably subpar, even when compare
 
 ## Usage
 
-'''build.rs
+```build.rs
 mod redoxr;
 use redoxr::redoxr::*;
 
@@ -18,7 +18,7 @@ fn main() -> MainResult {
     );
 }
 
-'''
+```
 
 ## Refrences
 
