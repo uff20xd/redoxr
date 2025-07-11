@@ -3,6 +3,7 @@ use redoxr::redoxr::*;
 
 fn main() -> MainResult {
     let _redoxr = Redoxr::new(&[
+        "--cfg", "quiet",
         //"--cfg", "run",
         //"--cfg", "debug",
     ]);
@@ -12,11 +13,6 @@ fn main() -> MainResult {
             "-Cpanic=abort",
             "--edition", "2024",
             "--target", "x86_64-unknown-none",
-            //"-Clink-arg=-nostartfiles",
-
-            //"-l", "c",
-            //"-Ctarget-feature=+crt-static",
-            //"--target=x86_64-unknown-linux-gnu",
         ])
         .make_bin()
         //.set_output_file("nostd")
