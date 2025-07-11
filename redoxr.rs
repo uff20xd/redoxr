@@ -691,20 +691,23 @@ pub mod redoxr {
                 .args(COMP_VERSION)
                 .args(&self.flags[..]);
 
-            let mut child = match compile_command.spawn() {
-                Ok(value) =>  {
-                    value
+            #[cfg(not(quiet))]
+            match compile_command.status() {
+                Ok(_) =>  {
+                    None
                 },
                 Err(_value) => {
                     return Some(RedoxError::Error(line!()));
                 }
-            };
-            match child.wait() {
-                Ok(_value ) => {
+            }
+
+            #[cfg(quiet)]
+            match compile_command.output() {
+                Ok(_) =>  {
                     None
                 },
-                Err(_value ) => {
-                    Some(RedoxError::Error(line!()))
+                Err(_value) => {
+                    return Some(RedoxError::Error(line!()));
                 }
             }
         }
