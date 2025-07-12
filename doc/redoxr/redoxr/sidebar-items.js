@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["COMP_VERSION","PATH_SEPERATOR"],"enum":["RedoxError"],"struct":["Mirror","Redoxr","RustCrate"],"trait":["RedoxrCompatible"]};
+window.SIDEBAR_ITEMS = {"constant":["COMP_VERSION","PATH_SEPERATOR"],"enum":["RedoxError"],"struct":["Mirror","Redoxr","RustCrate"],"trait":["RedoxrCompatible"],"type":["AnyError","Cmd","MainResult"]};

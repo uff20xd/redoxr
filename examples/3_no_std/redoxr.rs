@@ -1,65 +1,61 @@
-//====================================================================
-//Redoxr is a open-source build_scripter inspired by nob.h (https://github.com/tsoding/nob.h) and
-//Cargo (https://github.com/rust-lang/cargo).
-//
-//Its not made to be used in actual projects and does not fit many use cases.
-//On the contrary it does help with actually thinking about what you are building and what libs you
-//really need.
-//There is also (planned) cross-compatitibility with Cargo both ways. 
-//Cargo to Redox will be added first and Redox to Cargo will be added using Truck (see at the
-//bottom).
-//All outputs will be put in the bin/ (and bin/deps/) directory, which sanitizes the
-//environment and adds reproducability.
-//
-//This is just the start and in the end I want to be able to compile anything using Redoxr and also
-//be able to easily extend it to any other language using "intelligent trait usage".
-//
-//Basic Usage:
-//
-//####build.rs####
-//mod redoxr;
-//use redoxr::redoxr::*;
-//
-//fn main() -> () {
-//    let mut redoxr = Redoxr::new();
-//    handle!(redoxr self_compile);
-//    handle!(redoxr setup_env);
-//
-//    let mut main_crate = RustCrate::main( "some_crate");
-//    if let Some(error) = main_crate.compile() {panic!("{}",error)};
-//}
-//################
-//
-//You can add dependencies just by using .dependency(dependency).
-//(For this you currently need to compile the dependency first):
-//
-//####build.rs####
-//mod redoxr;
-//use redoxr::redoxr::*;
-//
-//fn main() -> () {
-//    let mut redoxr = Redoxr::new();
-//    let mut dependency = RustCrate::from_cargo("clap", "clap");
-//
-//    if let Some(error) = dependency.compile() {panic!("{}",error)}
-//
-//    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate").
-//        .depend_on(dependecy.clone());
-//
-//    //There is also this macro that compiles dependencies.
-//    compile!(main_crate);
-//}
-//################
-//
-//The compile! macro just expands to the whole if-let-then-panic-statement.
-//
-//The dependency list uses the incredible Mirror technology (just a semi-safe wrapper around raw
-//pointer), which allows for dependencies to be built after being passed as such while still being
-//able to handle errors.
-//Currently that is most of the magic, but soon I will implement the version that uses traits,
-//making it expandable to other languages easily as long as I write it correctly.
-//====================================================================
 #![allow(dead_code)]
+///Redoxr is a open-source build_scripter inspired by [nob.h](https://github.com/tsoding/nob.h) and
+///[Cargo](https://github.com/rust-lang/cargo).
+///
+///Its not made to be used in actual projects and does not fit many use cases.
+///On the contrary it does help with actually thinking about what you are building and what libs you
+///really need.
+///There is also (planned) cross-compatitibility with Cargo both ways. 
+///Cargo to Redox will be added first and Redox to Cargo will be added using Truck (see at the
+///bottom).
+///All outputs will be put in the bin/ (and bin/deps/) directory, which sanitizes the
+///environment and adds reproducability.
+///
+///This is just the start and in the end I want to be able to compile anything using Redoxr and also
+///be able to easily extend it to any other language using "intelligent trait usage".
+///
+///Basic Usage:
+///
+///```Rust
+///mod redoxr;
+///use redoxr::redoxr::*;
+///
+///fn main() -> () {
+///    let mut redoxr = Redoxr::new();
+///
+///    let mut main_crate = RustCrate::main( "some_crate");
+///    if let Some(error) = main_crate.compile() {panic!("{}",error)};
+///}
+///```
+///
+///You can add dependencies just by using .depend_on(dependency).
+///(For this you currently need to compile the dependency first):
+///
+///```Rust
+///mod redoxr;
+///use redoxr::redoxr::*;
+///
+///fn main() -> () {
+///    let mut redoxr = Redoxr::new();
+///    let mut dependency = RustCrate::from_cargo("clap", "clap");
+///
+///    if let Some(error) = dependency.compile() {panic!("{}",error)}
+///
+///    let mut main_crate = RustCrate::main(&mut redoxr, "some_crate").
+///        .depend_on(dependecy.clone());
+///
+///    //There is also this macro that compiles dependencies.
+///    compile!(main_crate);
+///}
+///```
+///
+///The compile! macro just expands to the whole if-let-then-panic-statement.
+///
+///The dependency list uses the incredible Mirror technology (just a semi-safe wrapper around raw
+///pointer), which allows for dependencies to be built after being passed as such while still being
+///able to handle errors.
+///Currently that is most of the magic, but soon I will implement the version that uses traits,
+///making it expandable to other languages easily as long as I write it correctly.
 
 pub mod redoxr {
 
@@ -175,16 +171,17 @@ pub mod redoxr {
     }
 
     pub trait RedoxrCompatible {
-        fn compile(&self) -> Option<RedoxError>;
+        fn compile(&self) -> Result<(),RedoxError>;
         fn depend_on(&mut self, dep: *mut Box<dyn RedoxrCompatible>) -> &mut Box<dyn RedoxrCompatible>;
         //fn get_outputs(&self) -> String;
         fn flags(&mut self) -> &mut Box<dyn RedoxrCompatible>;
-        fn is_output_file(&self) -> bool;
+        fn is_output_file_name(&self) -> bool;
         fn is_compiled(&self) -> bool;
         fn is_bin(&self) -> bool;
         fn is_lib(&self) -> bool;
         fn get_outpath(&self) -> String;
         fn get_name(&self) -> String;
+        fn get_root(&self) -> String;
         fn stay(&mut self) -> Box<dyn RedoxrCompatible>;
     }
     // Implement Concept for better builds
@@ -328,17 +325,16 @@ pub mod redoxr {
 
             let mut _needed_files: Vec<String> = Vec::new();
 
-            let release_path_part: String = PATH_SEPERATOR.to_owned() + "target" + PATH_SEPERATOR + "release";
+            let release_path = self.root.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release";
+            let name = "lib".to_owned() + &(self.name.clone()) + ".rlib";
 
-            let release_path = self.root.clone() + &release_path_part;
-            let release_deps_path = self.root.clone() + &release_path_part + PATH_SEPERATOR + "deps";
+            let mut copy_command = Command::new("cp");
 
-            let mut files_in_dir = fs::read_dir(Path::new(&release_path))?;
-
-            for file in files_in_dir {
-                println!("{:?}", file);
-            }
-
+            let _ = copy_command
+                //.arg()
+                .arg(release_path.clone() + &name)
+                .arg("out/deps");
+            _ = self.set_output_file(&name);
 
             Ok(())
         }
@@ -364,11 +360,11 @@ pub mod redoxr {
                 crate_type = "lib".to_owned();
             }
 
-            let mut dependency_flags: Vec<(String, String)> = Vec::new();
+            let mut dependency_flags: Vec<(String, String, String)> = Vec::new();
             for dependency in &self.deps {
                 if !dependency.borrow().is_compiled() {return Some(RedoxError::Error(line!()))}
                 let dep = dependency.borrow();
-                dependency_flags.push(( dep.name.clone(), dep.get_outpath()));
+                dependency_flags.push(( dep.get_name(), dep.get_outpath(), dep.get_root()));
 
                 #[cfg(debug)]
                 dbg!(&dependency);
@@ -385,7 +381,11 @@ pub mod redoxr {
 
             for dependency in dependency_flags {
                 let _ = compile_command
-                    .args(&["--extern", &(dependency.0.clone() + "=" + &dependency.1)]);
+                    .args(&["--extern", &(dependency.0.clone() + "=" + &dependency.1)])
+                    .args(&[
+                        "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release"),
+                        "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release" + PATH_SEPERATOR + "deps")
+                    ]);
 
                 #[cfg(debug)]
                 dbg!(&dependency);
@@ -515,6 +515,10 @@ pub mod redoxr {
 
         pub fn get_name (&self) -> String {
             self.name.clone()
+        }
+
+        pub fn get_root (&self) -> String {
+            self.root.clone()
         }
 
         pub fn flags (&mut self, flags: &[&'a str]) -> &mut Self {
@@ -712,149 +716,6 @@ pub mod redoxr {
             }
         }
     }
-}
-
-#[allow(unused_variables)]
-pub mod oxygen_cli {
-
-    #[cfg(target_os = "linux")]
-    pub const PATH_SEPERATOR: &'static str = r"/";
-    
-    #[cfg(target_os = "windows")]
-    pub const PATH_SEPERATOR: &'static str = r"\";
-
-    #[derive(Clone)]
-    enum OxygenCommandType {
-        WithArg,
-        NoArg,
-        ParentCommand,
-        HelpFlag,
-    }
-
-    #[derive(Clone)]
-    enum OxygenIOArgType {
-        LongFlag,
-        ShortFlag,
-        Command,
-        UserInput,
-        EndOfArgs,
-    }
-
-    #[derive(Clone)]
-    struct OxygenIOArg (pub String, pub OxygenIOArgType);
-
-    #[derive(Clone)]
-    struct OxygenCommand {
-            name: String,
-            command_type: OxygenCommandType,
-            description: String,
-            children: Vec<OxygenCommand>,
-    }
-
-    impl OxygenCommand
-     {
-        pub fn new(name: &str, command_type: OxygenCommandType, description: String) -> Self {
-            Self { name: name.to_owned(), command_type, description, children: Vec::new() }
-        }
-
-        pub fn arg(&self, pos: usize) -> String {
-            todo!()
-        }
-
-        pub fn is_arg(&self, pos: usize, equal: &str) -> bool {
-            todo!()
-        }
-
-        pub fn is_null(&self) -> bool {
-            todo!()
-        }
-    }
-
-    #[derive(Clone)]
-    struct OxygenFlag {
-        pub used: bool,
-        pub arg: String,
-        description: String,
-        long: String,
-        short: String,
-        flag_type: OxygenCommandType,
-    }
-
-    #[derive(Clone)]
-    pub struct OxygenCLI {
-            commands: Vec<OxygenCommand>,
-            flags: Vec<OxygenFlag>,
-            command_pointer: Vec<usize>,
-            base_type: OxygenCommandType,
-        }
-
-    impl OxygenCLI
-     {
-        pub fn new() -> Self {
-            let mut return_struct = Self{
-                commands: Vec::new(),
-                flags: Vec::new(),
-                command_pointer: Vec::new(),
-                base_type: OxygenCommandType::ParentCommand,
-            };
-
-            let _ = return_struct.flag();
-            return_struct
-
-        }
-        pub fn add_command<A>(&mut self, name: &str, action: A) -> &mut Self
-            where A: FnMut() -> () {
-            self.commands.push(
-                OxygenCommand::new(name, OxygenCommandType::NoArg, "No description provided".to_string())
-            );
-            self
-        }
-        pub fn flag(&mut self) -> &mut Self {
-            self
-        }
-
-        fn help(&mut self) -> () {
-            println!("Commands:");
-            for command in &self.commands {
-                println!("\t{} - {}", command.name, command.description);
-            }
-
-            println!("\nFlags:");
-            for flag in &self.flags {
-                println!("\t{} {} - {}", flag.long, flag.short, flag.description);
-            }
-        }
-
-        fn resolve() -> Vec<OxygenIOArg> {
-
-            let raw_args = std::env::args().collect::<Vec<String>>();
-            let mut output = Vec::new();
-            for arg in raw_args {
-                if arg.len() > 0 {
-                    if arg == "--help" || arg == "-h" {
-
-                        output.push(OxygenIOArg("help".to_string(), OxygenIOArgType::Command));
-
-                    } else if arg.starts_with("--") {
-
-                        output.push(OxygenIOArg(arg[2..].to_string(), OxygenIOArgType::LongFlag));
-
-                    } else if arg.starts_with("-") {
-
-                        output.push(OxygenIOArg(arg[1..].to_string(), OxygenIOArgType::ShortFlag));
-
-                    } else {
-
-                        output.push(OxygenIOArg(arg, OxygenIOArgType::Command));
-
-                    }
-                } else {
-                    output.push(OxygenIOArg("".to_string(), OxygenIOArgType::EndOfArgs));
-                }
-            }
-            output
-        }
-   }
 }
 
 pub mod truck {
