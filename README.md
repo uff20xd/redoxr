@@ -6,7 +6,7 @@ Also my code is a mess, so its performance is probably subpar, even when compare
 
 ## Usage
 
-```build.rs
+```Rust
 mod redoxr;
 use redoxr::redoxr::*;
 
@@ -16,6 +16,31 @@ fn main() -> MainResult {
         "--cfg", "quiet",
         "--cfg", "run",
     );
+
+    let dep1 = RustCrate::from_cargo("serde", "./serde");
+    let dep2 = RustCrate::new("settings_manager", "./settings_manager")
+        .flags(&[
+            "--edition", "2024",
+            "--Coptlevel", "3",
+        ])
+        //Pass your dependencies as a mutable pointer
+        .depend_on(&mut dep1)
+        .stay();
+    let main_crate = RustCrate::new("Some_project", ".")
+        .flags(&[
+            "--edition", "2024",
+            "--Coptlevel", "3",
+        ])
+        .depend_on(&mut dep2)
+        .make_output()
+        .make_bin()
+        .stay();
+
+    compile!(dep1);
+    compile!(dep2);
+    compile!(main_crate);
+    //only works if --cfg run is enabled
+    run!(main_crate);
 }
 
 ```
