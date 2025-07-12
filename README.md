@@ -1,5 +1,5 @@
 # Redoxr
-Redoxr is a build system library based on nob.h [https://github.com/tsoding/nob.h] by Tsoding and the Zig [https://ziglang.org/] build system.
+Redoxr is a build system library based on nob.h[https://github.com/tsoding/nob.h] by Tsoding and the Zig[https://ziglang.org/] build system.
 
 **You probably shouldnt use this in production as it is currently not stable and not made for anything serious!!**
 Also my code is a mess, so its performance is probably subpar, even when compared to cargo.
