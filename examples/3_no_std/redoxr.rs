@@ -191,7 +191,7 @@ pub mod redoxr {
     #[macro_export]
     macro_rules! compile {
         ($comp_file:ident) => {
-            if let Some(error) = ($comp_file).compile() {panic!("{}",error)}
+            _ = ($comp_file).compile()?;
         }
     }
 
@@ -199,7 +199,7 @@ pub mod redoxr {
     #[macro_export]
     macro_rules! run {
         ($comp_file:ident) => {
-            if let Some(error) = ($comp_file).run() {panic!("{}",error)}
+            _ = ($comp_file).run()?;
         }
     }
 
@@ -214,6 +214,7 @@ pub mod redoxr {
         is_output_crate: bool,
         show_output: bool,
 
+        pass_on_args: Vec<String>,
         deps: Vec<Mirror<RustCrate<'a>>>,
         crate_type: CrateType,
         crate_manager: CrateManager,
@@ -241,6 +242,8 @@ pub mod redoxr {
                 is_output_crate: false,
                 show_output: false,
 
+                pass_on_args: Vec::new(),
+
                 deps: Vec::new(),
                 crate_type: CrateType::Empty,
                 crate_manager: CrateManager::Redoxr,
@@ -260,6 +263,8 @@ pub mod redoxr {
                 output_file: name.to_owned(),
                 is_output_crate: false,
                 show_output: false,
+
+                pass_on_args: Vec::new(),
 
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
@@ -289,6 +294,8 @@ pub mod redoxr {
                 output_file: name.to_owned(),
                 is_output_crate: false,
                 show_output: false,
+
+                pass_on_args: Vec::new(),
 
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
@@ -339,7 +346,7 @@ pub mod redoxr {
             Ok(())
         }
 
-        pub fn compile(&mut self) -> Option<RedoxError> {
+        pub fn compile(&mut self) -> Result<(), RedoxError> {
 
             let input_path = self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file;
             let output_path: String;
@@ -350,8 +357,8 @@ pub mod redoxr {
             }
 
             println!("\nCompiling {}: {} -> {}", self.name.clone(), self.root.clone(), &output_path);
-            if self.is_compiled() {return Some(RedoxError::AlreadyCompiled(self.name.clone()))}
-            //if self.is_cargo() {return self.compile_cargo()}
+            if self.is_compiled() {return Err(RedoxError::AlreadyCompiled(self.name.clone()))}
+            if self.is_cargo() {return self.compile_cargo()}
             
             let crate_type;
             if self.is_bin() {
@@ -362,7 +369,7 @@ pub mod redoxr {
 
             let mut dependency_flags: Vec<(String, String, String)> = Vec::new();
             for dependency in &self.deps {
-                if !dependency.borrow().is_compiled() {return Some(RedoxError::Error(line!()))}
+                if !dependency.borrow().is_compiled() {return Err(RedoxError::Error(line!()))}
                 let dep = dependency.borrow();
                 dependency_flags.push(( dep.get_name(), dep.get_outpath(), dep.get_root()));
 
@@ -371,7 +378,7 @@ pub mod redoxr {
             }
 
             let mut compile_command = Command::new("rustc");
-            let _ = compile_command
+            _ = compile_command
                 .args(COMP_VERSION)
                 .args(&self.flags[..])
                 .arg(&input_path)
@@ -381,35 +388,35 @@ pub mod redoxr {
 
             for dependency in dependency_flags {
                 let _ = compile_command
-                    .args(&["--extern", &(dependency.0.clone() + "=" + &dependency.1)])
-                    .args(&[
-                        "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release"),
-                        "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release" + PATH_SEPERATOR + "deps")
-                    ]);
+                    .args(&["--extern", &(dependency.0.clone() + "=" + &dependency.1)]);
+                self.add_perma_args(&[
+                    "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release"),
+                    "-L", &(dependency.2.clone() + PATH_SEPERATOR + "target" + PATH_SEPERATOR + "release" + PATH_SEPERATOR + "deps")
+                ]);
 
                 #[cfg(debug)]
                 dbg!(&dependency);
             }
 
+            _ = compile_command
+                .args(&self.pass_on_args[..]);
+
             #[cfg(debug)]
             dbg!(&compile_command);
 
             if self.is_show_output() {
-                let mut child = match compile_command.spawn() {
-                    Ok(value) => {value},
-                    Err(_) => {return Some(RedoxError::Error(line!()))}
-                };
+                let mut child = compile_command.spawn()?;
 
                 match child.wait() {
                     Ok(_) => {
                         self.compiled = true;
-                        return None
+                        return Ok(());
                     },
-                    Err(_) => {return Some(RedoxError::Error(line!()))},
+                    Err(_) => {return Err(RedoxError::Error(line!()))},
                 }
             } else {
-                if compile_command.output().is_err() { return Some(RedoxError::Error(line!()))}
-                return None
+                _ = compile_command.output()?;
+                return Ok(());
             }
         }
 
@@ -495,6 +502,13 @@ pub mod redoxr {
             self
         }
 
+        pub fn add_perma_args(&mut self, args: &[&str]) -> &mut Self {
+            for arg in args {
+                self.pass_on_args.push(arg.to_string());
+            }
+            self
+        }
+
         pub fn is_output_file(&self) -> bool {
             self.is_output_crate
         }
@@ -530,7 +544,7 @@ pub mod redoxr {
 
         ///Only used for the purpose of distributing my one wonder and debugging.
         ///You probably shouldnt use this.
-        pub fn copy_raw(&self, path: &str) -> Option<RedoxError> {
+        pub fn copy_raw(&self, path: &str) -> Result<(),RedoxError> {
             //#[cfg(target_os = "windows")]
             //let mut copy_command = Command::new("copy");
 
@@ -542,48 +556,26 @@ pub mod redoxr {
                 .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
                 .arg(path);
 
-            let mut child = match copy_command.spawn() {
-                Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error(line!()))}
-            };
-
-            match child.wait() {
-                Ok(_) => {return None},
-                Err(_) => {return Some(RedoxError::Error(line!()))}
-            }
+            _ = copy_command.status()?;
+            Ok(())
         }
 
         ///runs the compiled crate as long as the --cgf run option is enabled
-        pub fn run(&self) -> Option<RedoxError> {
+        pub fn run(&self) -> Result<(), RedoxError> {
             #[cfg(not(run))]
             const RUN: bool = false;
 
             #[cfg(run)]
             const RUN: bool = true;
 
-            if !RUN { return None }
-            if !self.is_compiled() {return Some(RedoxError::NotCompiled)}
-            if !self.is_bin() {return Some(RedoxError::NotExecutable)}
+            if !RUN { return Ok(()) }
+            if !self.is_compiled() {return Err(RedoxError::NotCompiled)}
+            if !self.is_bin() {return Err(RedoxError::NotExecutable)}
 
             let command_name = ".".to_owned() + PATH_SEPERATOR + &self.get_outpath();
             let mut run_command = Command::new(command_name);
-            let mut child = match run_command.spawn() {
-                Ok(value) => {value},
-                Err(_) => {return Some(RedoxError::Error(line!()))}
-            };
-
-            match child.wait() {
-                Ok(_) => {return None},
-                Err(_) => {return Some(RedoxError::Error(line!()))}
-            }
-        }
-    }
-
-    ///Basically the same as the 
-    #[macro_export]
-    macro_rules! handle {
-        ($comp_file:ident, $method:ident) => {
-            if let Some(error) = ($comp_file).$method() {panic!("{}",error)}
+            _ = run_command.status()?;
+            Ok(())
         }
     }
 
@@ -613,7 +605,10 @@ pub mod redoxr {
             {
                 let _ = build_script.flags.push("--cfg");
                 let _ = build_script.flags.push("boot_strap");
-                handle!(build_script, self_compile);
+                _ = match build_script.self_compile() {
+                    Ok(_) => {},
+                    Err(err) => {panic!("{}", err)},
+                };
             }
 
             #[cfg(not(manual))]
@@ -669,7 +664,7 @@ pub mod redoxr {
             self
         }
 
-        pub fn self_compile(&mut self) -> Option<RedoxError> {
+        pub fn self_compile(&mut self) -> Result<(), RedoxError> {
 
             #[cfg(boot_strap)]
             #[cfg(manual)]
@@ -687,7 +682,7 @@ pub mod redoxr {
             #[cfg(not(boot_strap))]
             const BOOT_STRAP: bool = false;
 
-            if self.compiled || !BOOT_STRAP { return None }
+            if self.compiled || !BOOT_STRAP { return Ok(()) }
             else { self.compiled = true; }
 
             let mut compile_command = Command::new("rustc");
@@ -696,24 +691,12 @@ pub mod redoxr {
                 .args(&self.flags[..]);
 
             #[cfg(not(quiet))]
-            match compile_command.status() {
-                Ok(_) =>  {
-                    None
-                },
-                Err(_value) => {
-                    return Some(RedoxError::Error(line!()));
-                }
-            }
+            let _ = compile_command.status()?;
 
             #[cfg(quiet)]
-            match compile_command.output() {
-                Ok(_) =>  {
-                    None
-                },
-                Err(_value) => {
-                    return Some(RedoxError::Error(line!()));
-                }
-            }
+            let _ = compile_command.output()?;
+
+            Ok(())
         }
     }
 }

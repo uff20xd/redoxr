@@ -295,6 +295,8 @@ pub mod redoxr {
                 is_output_crate: false,
                 show_output: false,
 
+                pass_on_args: Vec::new(),
+
                 deps: Vec::new(),
                 crate_type: CrateType::Lib,
                 crate_manager: CrateManager::Cargo,
@@ -408,13 +410,13 @@ pub mod redoxr {
                 match child.wait() {
                     Ok(_) => {
                         self.compiled = true;
-                        return OK(()),
+                        return Ok(());
                     },
                     Err(_) => {return Err(RedoxError::Error(line!()))},
                 }
             } else {
-                if compile_command.output().is_err() { return Some(RedoxError::Error(line!()))}
-                return None
+                _ = compile_command.output()?;
+                return Ok(());
             }
         }
 
@@ -502,7 +504,7 @@ pub mod redoxr {
 
         pub fn add_perma_args(&mut self, args: &[&str]) -> &mut Self {
             for arg in args {
-                self.pass_on_args.push(arg.to_owned());
+                self.pass_on_args.push(arg.to_string());
             }
             self
         }
@@ -554,7 +556,8 @@ pub mod redoxr {
                 .arg(self.root.clone() + PATH_SEPERATOR + &self.src_dir + PATH_SEPERATOR + &self.main_file)
                 .arg(path);
 
-            _ = copy_command.status()? 
+            _ = copy_command.status()?;
+            Ok(())
         }
 
         ///runs the compiled crate as long as the --cgf run option is enabled
@@ -565,13 +568,14 @@ pub mod redoxr {
             #[cfg(run)]
             const RUN: bool = true;
 
-            if !RUN { return None }
+            if !RUN { return Ok(()) }
             if !self.is_compiled() {return Err(RedoxError::NotCompiled)}
             if !self.is_bin() {return Err(RedoxError::NotExecutable)}
 
             let command_name = ".".to_owned() + PATH_SEPERATOR + &self.get_outpath();
             let mut run_command = Command::new(command_name);
             _ = run_command.status()?;
+            Ok(())
         }
     }
 
@@ -601,7 +605,10 @@ pub mod redoxr {
             {
                 let _ = build_script.flags.push("--cfg");
                 let _ = build_script.flags.push("boot_strap");
-                handle!(build_script, self_compile);
+                _ = match build_script.self_compile() {
+                    Ok(_) => {},
+                    Err(err) => {panic!("{}", err)},
+                };
             }
 
             #[cfg(not(manual))]
@@ -657,7 +664,7 @@ pub mod redoxr {
             self
         }
 
-        pub fn self_compile(&mut self) -> Option<RedoxError> {
+        pub fn self_compile(&mut self) -> Result<(), RedoxError> {
 
             #[cfg(boot_strap)]
             #[cfg(manual)]
@@ -675,7 +682,7 @@ pub mod redoxr {
             #[cfg(not(boot_strap))]
             const BOOT_STRAP: bool = false;
 
-            if self.compiled || !BOOT_STRAP { return None }
+            if self.compiled || !BOOT_STRAP { return Ok(()) }
             else { self.compiled = true; }
 
             let mut compile_command = Command::new("rustc");
@@ -684,24 +691,12 @@ pub mod redoxr {
                 .args(&self.flags[..]);
 
             #[cfg(not(quiet))]
-            match compile_command.status() {
-                Ok(_) =>  {
-                    None
-                },
-                Err(_value) => {
-                    return Some(RedoxError::Error(line!()));
-                }
-            }
+            let _ = compile_command.status()?;
 
             #[cfg(quiet)]
-            match compile_command.output() {
-                Ok(_) =>  {
-                    None
-                },
-                Err(_value) => {
-                    return Some(RedoxError::Error(line!()));
-                }
-            }
+            let _ = compile_command.output()?;
+
+            Ok(())
         }
     }
 }

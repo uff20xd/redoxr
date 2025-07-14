@@ -11,10 +11,8 @@ fn main () -> MainResult {
 
     //automatically self_compiles
     let mut redoxr = Redoxr::new(&[
-        "--cfg", "manual",
+        "--cfg", "quiet",
     ]);
-    handle!(redoxr, self_compile);
-    handle!(redoxr, setup_env);
 
     let mut redoxr_lib = RustCrate::new("redoxr", ".")
         .make_lib()
@@ -24,10 +22,10 @@ fn main () -> MainResult {
         .stay();
 
 
-    if let Some(error) = redoxr_lib.copy_raw("examples/1_single_crate") {panic!("{}", error)}
-    if let Some(error) = redoxr_lib.copy_raw("examples/2_with_crate_dependencies") {panic!("{}", error)}
-    if let Some(error) = redoxr_lib.copy_raw("examples/3_no_std") {panic!("{}", error)}
-    if let Some(error) = redoxr_lib.copy_raw("examples/4_with_cargo") {panic!("{}", error)}
+    _ = redoxr_lib.copy_raw("examples/1_single_crate")?;
+    _ = redoxr_lib.copy_raw("examples/2_with_crate_dependencies")?;
+    _ = redoxr_lib.copy_raw("examples/3_no_std")?;
+    _ = redoxr_lib.copy_raw("examples/4_with_cargo")?;
     compile!(redoxr_lib);
 
     let dir = fs::read_dir(".")?;
