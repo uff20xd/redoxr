@@ -4,11 +4,14 @@ use test_lib::factorial;
 //use libs::crate_test::*;
 extern crate redoxr;
 use redoxr::redoxr::Mirror;
+use std::env;
 
 fn main() {
     let mut fact = factorial(10);
     let _ = Mirror::new(&mut fact);
-    println!("{} ; {}", fibbonaci(50), factorial(20));
+    let args: Vec<String> = env::args().collect();
+
+    println!("{} ; {} ; {:?}", fibbonaci(50), factorial(20), args);
 }
 
 fn fibbonaci(n: u64) -> u64 {
