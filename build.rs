@@ -11,7 +11,6 @@ fn main () -> MainResult {
 
     //automatically self_compiles
     let mut redoxr = Redoxr::new(&[
-        "--cfg", "quiet",
         "--cfg", "run",
     ]);
 

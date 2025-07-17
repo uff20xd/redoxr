@@ -88,8 +88,12 @@ pub mod redoxr {
 
     use std::{
         process::{
-            Command, //Child,
+            Command,
+            exit,
+            //Child,
         }, 
+        time::SystemTimeError,
+        env,
         fs::self,
         error::Error,
         fmt::Display,
@@ -132,6 +136,7 @@ pub mod redoxr {
         NotCompiled,
         AlreadyCompiled(String),
         IOProcessFailed(IOError),
+        SelfCompileError(Box<dyn Error>)
     }
 
     impl Display for RedoxError {
@@ -143,6 +148,7 @@ pub mod redoxr {
                 RedoxError::NotCompiled => {format!("The File is not Compiled!")},
                 RedoxError::AlreadyCompiled(file) => {format!("File {} is already compiled!", file)},
                 RedoxError::IOProcessFailed(error) => {format!("{}", error)},
+                RedoxError::SelfCompileError(error) => {format!("{}", error)},
             };
             write!(f, "{}", output)
         }
@@ -152,6 +158,12 @@ pub mod redoxr {
     impl From<IOError> for RedoxError {
         fn from(io_error: std::io::Error) -> Self {
             RedoxError::IOProcessFailed(io_error)
+        }
+    }
+
+    impl From<SystemTimeError> for RedoxError {
+        fn from(system_time_error: std::time::SystemTimeError) -> Self {
+            RedoxError::SelfCompileError(Box::new(system_time_error))
         }
     }
 
@@ -703,16 +715,33 @@ pub mod redoxr {
             if self.compiled || !BOOT_STRAP { return Ok(()) }
             else { self.compiled = true; }
 
-            let mut compile_command = Command::new("rustc");
-            let _ = compile_command.arg("build.rs")
-                .args(COMP_VERSION)
-                .args(&self.flags[..]);
+            let args: Vec<String> = std::env::args().collect();
+            let main_file_name = args[0].clone() + ".rs";
+            let main_file = fs::File::open(&main_file_name)?;
+            let exec_file = fs::File::open(&args[0])?;
 
-            #[cfg(not(quiet))]
-            let _ = compile_command.status()?;
+            #[cfg(debug)]
+            println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
-            #[cfg(quiet)]
-            let _ = compile_command.output()?;
+            if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? {
+                let mut compile_command = Command::new("rustc");
+                let _ = compile_command.arg(&main_file_name)
+                    .args(&["-o", &args[0]])
+                    .args(COMP_VERSION)
+                    .args(&self.flags[..]);
+
+                #[cfg(verbose)]
+                let _ = compile_command.status()?;
+
+                #[cfg(not(verbose))]
+                let _ = compile_command.output()?;
+
+                let mut run_command = Command::new(&args[0]);
+
+                let _ = run_command.status()?;
+
+                exit(0)
+            }
 
             Ok(())
         }
