@@ -17,6 +17,7 @@
         ];
       in
       {
+        #test
         devShells.default = pkgs.mkShell rec {
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = with pkgs; [
