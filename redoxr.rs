@@ -477,9 +477,8 @@ pub mod redoxr {
 
         pub fn make_bin(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
-                CrateType::Lib => {CrateType::Bin},
-                CrateType::Bin => {CrateType::Bin},
-                CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")}
+                CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")},
+                _ => { CrateType::Bin }
             };
             self.output_file = self.name.clone();
             self
@@ -488,9 +487,8 @@ pub mod redoxr {
         ///This function is not meant to be used as RustCrates start as a lib
         pub fn make_lib(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
-                CrateType::Lib => {CrateType::Lib},
-                CrateType::Bin => {CrateType::Lib},
-                CrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")}
+                CrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")},
+                _ => { CrateType::Lib }
             };
             self
         }
