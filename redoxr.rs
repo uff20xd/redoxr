@@ -499,7 +499,7 @@ pub mod redoxr {
         }
 
         pub fn set_crate_type(&mut self, ct: CrateType) -> &mut Self {
-            self.crate_type = ct
+            self.crate_type = ct;
             self
         }
 
