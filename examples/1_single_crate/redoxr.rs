@@ -168,9 +168,10 @@ pub mod redoxr {
     }
 
     #[derive(Clone, Debug)]
-    enum CrateType {
+    pub enum CrateType {
         Lib,
         Bin,
+        ProcMacro,
         Empty,
     }
 
@@ -375,12 +376,12 @@ pub mod redoxr {
             if self.is_compiled() {return Err(RedoxError::AlreadyCompiled(self.name.clone()))}
             if self.is_cargo() {return self.compile_cargo()}
             
-            let crate_type;
-            if self.is_bin() {
-                crate_type = "bin".to_owned();
-            } else {
-                crate_type = "lib".to_owned();
-            }
+            let crate_type = match self.crate_type {
+                CrateType::Bin => { "bin".to_owned() },
+                CrateType::Lib => { "lib".to_owned() },
+                CrateType::ProcMacro => { "proc-macro".to_owned() },
+                _ => { "lib".to_owned() },
+            };
 
             let mut dependency_flags: Vec<(String, String, String)> = Vec::new();
             for dependency in &self.deps {
@@ -476,9 +477,8 @@ pub mod redoxr {
 
         pub fn make_bin(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
-                CrateType::Lib => {CrateType::Bin},
-                CrateType::Bin => {CrateType::Bin},
-                CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")}
+                CrateType::Empty => {panic!("Cant change an empty crate to a binary! (fn make_bin)")},
+                _ => { CrateType::Bin }
             };
             self.output_file = self.name.clone();
             self
@@ -487,15 +487,19 @@ pub mod redoxr {
         ///This function is not meant to be used as RustCrates start as a lib
         pub fn make_lib(&mut self) -> &mut Self {
             self.crate_type = match &self.crate_type {
-                CrateType::Lib => {CrateType::Lib},
-                CrateType::Bin => {CrateType::Lib},
-                CrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")}
+                CrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")},
+                _ => { CrateType::Lib }
             };
             self
         }
 
         pub fn depend_on(&mut self, dep: *mut RustCrate<'a>) -> &mut Self {
             self.deps.push(Mirror(dep));
+            self
+        }
+
+        pub fn set_crate_type(&mut self, ct: CrateType) -> &mut Self {
+            self.crate_type = ct;
             self
         }
 
