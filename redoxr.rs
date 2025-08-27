@@ -171,6 +171,7 @@ pub mod redoxr {
     enum CrateType {
         Lib,
         Bin,
+        ProcMacro,
         Empty,
     }
 
@@ -375,12 +376,12 @@ pub mod redoxr {
             if self.is_compiled() {return Err(RedoxError::AlreadyCompiled(self.name.clone()))}
             if self.is_cargo() {return self.compile_cargo()}
             
-            let crate_type;
-            if self.is_bin() {
-                crate_type = "bin".to_owned();
-            } else {
-                crate_type = "lib".to_owned();
-            }
+            let crate_type = match self.crate_type {
+                CrateType::Bin => { "bin".to_owned() },
+                CrateType::Lib => { "lib".to_owned() },
+                CrateType::ProcMacro => { "proc-macro".to_owned() },
+                _ => { "lib".to_owned() },
+            };
 
             let mut dependency_flags: Vec<(String, String, String)> = Vec::new();
             for dependency in &self.deps {
