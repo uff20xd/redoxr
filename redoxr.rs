@@ -500,6 +500,11 @@ pub mod redoxr {
             self
         }
 
+        pub fn set_crate_type(&mut self, ct: CrateType) -> &mut Self {
+            self.crate_type = ct;
+            self
+        }
+
         pub fn set_root(&mut self, new_root: &str) -> &mut Self {
             self.root = new_root.to_owned();
             self
