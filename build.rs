@@ -35,12 +35,7 @@ fn main () -> MainResult {
     compile!(main);
     run!(main, "Hello");
     
-    let dir = fs::read_dir(".")?;
-
-    for _file in dir {
-        //println!("{:?}", file);
-        let _command = Cmd::new("ls").output()?;
-    }
+    println!("works");
 
     Ok(())
 }
