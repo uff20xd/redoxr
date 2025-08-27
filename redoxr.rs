@@ -168,7 +168,7 @@ pub mod redoxr {
     }
 
     #[derive(Clone, Debug)]
-    enum CrateType {
+    pub enum CrateType {
         Lib,
         Bin,
         ProcMacro,
@@ -501,7 +501,7 @@ pub mod redoxr {
         }
 
         pub fn set_crate_type(&mut self, ct: CrateType) -> &mut Self {
-            self.crate_type = ct;
+            self.crate_type = ct
             self
         }
 
