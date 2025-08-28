@@ -1,4 +1,8 @@
 # Redoxr
+THIS SYSTEM IS OUTDATED AS I HAVE BEGUN DEVELOPMENT ON A NEW VERSION OF REDOXR
+
+ -> new: https://github.com/uff20xd/redoxr
+
 Redoxr is a build system library based on [nob.h](https://github.com/tsoding/nob.h) by Tsoding and the [Zig](https://ziglang.org/) build system.
 
 **You probably shouldnt use this in production as it is currently not stable and not made for anything serious!!**
